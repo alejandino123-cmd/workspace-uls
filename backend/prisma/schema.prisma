@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+enum Rol {
+  ESTUDIANTE
+  DOCENTE
+  EMPRESA
+  COORDINACION
+}
+
+enum Disponibilidad {
+  TIEMPO_COMPLETO
+  TIEMPO_PARCIAL
+  SOLO_PROYECTOS
+}
+
+enum EstadoValidacion {
+  PENDIENTE
+  VALIDADO
+  RECHAZADO
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  nombre       String
+  rol          Rol      @default(ESTUDIANTE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  perfil        PerfilEstudiante?
+  validaciones  ValidacionDocente[]
+}
+
+model PerfilEstudiante {
+  id                Int             @id @default(autoincrement())
+  userId            Int             @unique
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  carrera           String?
+  porcentajeAvance  Int             @default(0)
+  historialAcademico String?
+  disponibilidad    Disponibilidad?
+
+  habilidades Habilidad[]
+  proyectos   Proyecto[]
+}
+
+model Habilidad {
+  id      Int    @id @default(autoincrement())
+  nombre  String @unique
+
+  perfiles  PerfilEstudiante[]
+  proyectos Proyecto[]
+}
+
+model Proyecto {
+  id                Int              @id @default(autoincrement())
+  perfilId          Int
+  perfil            PerfilEstudiante @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  titulo            String
+  descripcion       String
+  urlRepositorio    String?
+  urlDemo           String?
+  urlDocumentacion  String?
+  estadoValidacion  EstadoValidacion @default(PENDIENTE)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  tecnologias Habilidad[]
+  validacion  ValidacionDocente?
+}
+
+model ValidacionDocente {
+  id          Int      @id @default(autoincrement())
+  proyectoId  Int      @unique
+  proyecto    Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  docenteId   Int
+  docente     User     @relation(fields: [docenteId], references: [id])
+  comentario  String?
+  createdAt   DateTime @default(now())
+}
