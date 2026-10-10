@@ -5,6 +5,7 @@ import cors from "cors";
 import swaggerJsdoc from "swagger-jsdoc";
 import { apiReference } from "@scalar/express-api-reference";
 import { pingRouter } from "./routes/ping";
+import { authRouter } from "./routes/auth";
 
 const openApiSpec = swaggerJsdoc({
   definition: {
@@ -12,11 +13,42 @@ const openApiSpec = swaggerJsdoc({
     info: { title: "Workspace ULS API", version: "1.0.0" },
     servers: [{ url: "http://localhost:3000" }],
     components: {
-      securitySchemes: {
-        bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+  securitySchemes: {
+    bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+  },
+  schemas: {
+    User: {
+      type: "object",
+      properties: {
+        id: { type: "integer", example: 1 },
+        email: { type: "string", format: "email", example: "ana@ejemplo.com" },
+        nombre: { type: "string", example: "Ana López" },
+        rol: { type: "string", enum: ["ESTUDIANTE", "DOCENTE", "EMPRESA", "COORDINACION"] },
+      },
+    },
+    AuthResponse: {
+      type: "object",
+      properties: {
+        user: { $ref: "#/components/schemas/User" },
+        token: { type: "string", example: "eyJhbGciOiJIUzI1NiIs..." },
+      },
+    },
+    Error: {
+      type: "object",
+      properties: {
+        error: { type: "string", example: "Datos inválidos" },
+        detalles: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { campo: { type: "string" }, mensaje: { type: "string" } },
+          },
+        },
       },
     },
   },
+},
+},
   apis: ["./src/routes/*.ts"],
 });
 
@@ -29,8 +61,15 @@ app.get("/openapi.json", (_req, res) => res.json(openApiSpec));
 app.use("/reference", apiReference({ content: openApiSpec }));
 
 app.use("/api/v1", pingRouter);
-
+app.use("/api/v1/auth", authRouter);
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { type?: string }).type === "entity.parse.failed"
+  ) {
+    return res.status(400).json({ error: "El cuerpo de la petición no es un JSON válido" });
+  }
   console.error(err);
   res.status(500).json({ error: "Error interno del servidor" });
 });
