@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
@@ -27,13 +28,19 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@jest/globals": "^30.5.2",
+    "@swc/core": "^1.16.18",
+    "@swc/jest": "^0.2.39",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
     "@types/swagger-jsdoc": "^6.0.4",
+    "jest": "^30.5.2",
     "prisma": "^7.10.0",
+    "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
