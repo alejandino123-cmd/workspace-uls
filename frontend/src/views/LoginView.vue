@@ -8,6 +8,12 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Checkbox from 'primevue/checkbox'
 
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
+const authStore = useAuthStore()
+
 const email = ref('')
 const password = ref('')
 const recordarme = ref(false)
@@ -24,7 +30,8 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    // TODO: await authStore.login(email.value, password.value)
+    await authStore.login(email.value, password.value)
+    router.push('/perfil')
   } catch (e) {
     error.value = 'Credenciales incorrectas'
   } finally {
@@ -96,6 +103,8 @@ async function handleLogin() {
     </Card>
   </div>
 </template>
+
+
 
 <style scoped>
 .login-page {
