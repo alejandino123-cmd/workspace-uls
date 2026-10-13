@@ -8,6 +8,7 @@ import { pingRouter } from "./routes/ping";
 import { authRouter } from "./routes/auth";
 import { requireAuth } from "./middleware/auth";
 import { perfilRouter } from "./routes/perfil";
+import {proyectosRouter} from "./routes/proyectos";
 
 
 const openApiSpec = swaggerJsdoc({
@@ -49,6 +50,22 @@ const openApiSpec = swaggerJsdoc({
   },
 },
 
+Proyecto: {
+  type: "object",
+  properties: {
+    id: { type: "integer" },
+    titulo: { type: "string" },
+    descripcion: { type: "string" },
+    urlRepositorio: { type: "string", nullable: true },
+    urlDemo: { type: "string", nullable: true },
+    urlDocumentacion: { type: "string", nullable: true },
+    tecnologias: { type: "array", items: { type: "string" } },
+    estadoValidacion: { type: "string", enum: ["PENDIENTE", "VALIDADO", "RECHAZADO"] },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+  },
+},
+
     AuthResponse: {
       type: "object",
       properties: {
@@ -86,7 +103,7 @@ app.use("/reference", apiReference({ content: openApiSpec }));
 app.use("/api/v1", pingRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/perfil", requireAuth, perfilRouter);
-
+app.use("/api/v1/proyectos", requireAuth, proyectosRouter);
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (
     typeof err === "object" &&
