@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { config } from "../config";
 import { requireAuth, AuthRequest } from "../middleware/auth";
-
+import {validationError} from "../lib/validation";
 export const authRouter = Router();
 
 const registerSchema = z.object({
@@ -26,13 +26,6 @@ function signToken(user: { id: number; rol: string }) {
     subject: String(user.id),
     expiresIn: config.jwtExpiresIn as SignOptions["expiresIn"],
   });
-}
-
-function validationError(error: z.ZodError) {
-  return {
-    error: "Datos inválidos",
-    detalles: error.issues.map((i) => ({ campo: i.path.join("."), mensaje: i.message })),
-  };
 }
 
 /**

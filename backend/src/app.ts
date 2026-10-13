@@ -6,6 +6,9 @@ import swaggerJsdoc from "swagger-jsdoc";
 import { apiReference } from "@scalar/express-api-reference";
 import { pingRouter } from "./routes/ping";
 import { authRouter } from "./routes/auth";
+import { requireAuth } from "./middleware/auth";
+import { perfilRouter } from "./routes/perfil";
+
 
 const openApiSpec = swaggerJsdoc({
   definition: {
@@ -26,6 +29,26 @@ const openApiSpec = swaggerJsdoc({
         rol: { type: "string", enum: ["ESTUDIANTE", "DOCENTE", "EMPRESA", "COORDINACION"] },
       },
     },
+
+    Perfil: {
+      type: "object",
+      properties: {
+      id: { type: "integer", example: 1 },
+      porcentajeAvance: { type: "integer", minimum: 0, maximum: 100, example: 60 },
+      historialAcademico: { type: "string", nullable: true },
+      disponibilidad: {
+      type: "string",
+      nullable: true,
+      enum: ["TIEMPO_COMPLETO", "TIEMPO_PARCIAL", "SOLO_PROYECTOS"],
+    },
+    habilidades: {
+      type: "array",
+      items: { type: "string" },
+      example: ["Vue.js", "Node.js"],
+    },
+  },
+},
+
     AuthResponse: {
       type: "object",
       properties: {
@@ -62,6 +85,8 @@ app.use("/reference", apiReference({ content: openApiSpec }));
 
 app.use("/api/v1", pingRouter);
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/perfil", requireAuth, perfilRouter);
+
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (
     typeof err === "object" &&

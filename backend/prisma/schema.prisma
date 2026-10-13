@@ -45,43 +45,33 @@ model User {
 }
 
 model PerfilEstudiante {
-  id                Int             @id @default(autoincrement())
-  userId            Int             @unique
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  carrera           String?
-  porcentajeAvance  Int             @default(0)
+  id                 Int             @id @default(autoincrement())
+  userId             Int             @unique
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  porcentajeAvance   Int             @default(0)
   historialAcademico String?
-  disponibilidad    Disponibilidad?
+  disponibilidad     Disponibilidad?
+  habilidades        String[]        @default([])
 
-  habilidades Habilidad[]
-  proyectos   Proyecto[]
-}
-
-model Habilidad {
-  id      Int    @id @default(autoincrement())
-  nombre  String @unique
-
-  perfiles  PerfilEstudiante[]
   proyectos Proyecto[]
 }
 
 model Proyecto {
-  id                Int              @id @default(autoincrement())
-  perfilId          Int
-  perfil            PerfilEstudiante @relation(fields: [perfilId], references: [id], onDelete: Cascade)
-  titulo            String
-  descripcion       String
-  urlRepositorio    String?
-  urlDemo           String?
-  urlDocumentacion  String?
-  estadoValidacion  EstadoValidacion @default(PENDIENTE)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id               Int              @id @default(autoincrement())
+  perfilId         Int
+  perfil           PerfilEstudiante @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  titulo           String
+  descripcion      String
+  urlRepositorio   String?
+  urlDemo          String?
+  urlDocumentacion String?
+  tecnologias      String[]         @default([])
+  estadoValidacion EstadoValidacion @default(PENDIENTE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  tecnologias Habilidad[]
-  validacion  ValidacionDocente?
+  validacion ValidacionDocente?
 }
-
 model ValidacionDocente {
   id          Int      @id @default(autoincrement())
   proyectoId  Int      @unique
