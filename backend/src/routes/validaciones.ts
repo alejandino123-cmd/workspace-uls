@@ -137,3 +137,103 @@ validacionesRouter.post("/:proyectoId", async (req: AuthRequest, res) => {
   if (!existe) return res.status(404).json({ error: "Proyecto no encontrado" });
   res.status(409).json({ error: "El proyecto ya fue evaluado" });
 });
+
+const detalleSelect = {
+  ...proyectoSelect,
+  validacion: { select: { comentario: true, createdAt: true } },
+} as const;
+
+/**
+ * @openapi
+ * /api/v1/validaciones/proyectos/{id}:
+ *   get:
+ *     tags: [Validaciones]
+ *     summary: Ver el detalle de cualquier proyecto (docente)
+ *     description: Devuelve el proyecto con su estado de validación y los datos del estudiante dueño.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, minimum: 1 }
+ *     responses:
+ *       200:
+ *         description: Proyecto con datos del estudiante
+ *       400:
+ *         $ref: '#/components/responses/DatosInvalidos'
+ *       401:
+ *         $ref: '#/components/responses/NoAutenticado'
+ *       403:
+ *         $ref: '#/components/responses/SinPermiso'
+ *       404:
+ *         description: Proyecto no encontrado
+ */
+validacionesRouter.get("/proyectos/:id", async (req, res) => {
+  const id = idSchema.safeParse(req.params.id);
+  if (!id.success) {
+    return res.status(400).json({ error: "El id debe ser un entero positivo" });
+  }
+
+  const p = await prisma.proyecto.findUnique({
+    where: { id: id.data },
+    select: {
+      ...detalleSelect,
+      perfil: {
+        select: { user: { select: { id: true, nombre: true, email: true } } },
+      },
+    },
+  });
+  if (!p) return res.status(404).json({ error: "Proyecto no encontrado" });
+
+  const { perfil, ...resto } = p;
+  res.json({ ...resto, estudiante: perfil.user });
+});
+
+/**
+ * @openapi
+ * /api/v1/validaciones/estudiantes/{userId}/proyectos:
+ *   get:
+ *     tags: [Validaciones]
+ *     summary: Ver el portafolio completo de un estudiante (docente)
+ *     description: Devuelve todos los proyectos del estudiante, sin importar su estado de validación.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema: { type: integer, minimum: 1 }
+ *     responses:
+ *       200:
+ *         description: Estudiante y lista de proyectos
+ *       400:
+ *         $ref: '#/components/responses/DatosInvalidos'
+ *       401:
+ *         $ref: '#/components/responses/NoAutenticado'
+ *       403:
+ *         $ref: '#/components/responses/SinPermiso'
+ *       404:
+ *         description: Estudiante no encontrado
+ */
+validacionesRouter.get("/estudiantes/:userId/proyectos", async (req, res) => {
+  const id = idSchema.safeParse(req.params.userId);
+  if (!id.success) {
+    return res.status(400).json({ error: "El id debe ser un entero positivo" });
+  }
+
+  const estudiante = await prisma.user.findFirst({
+    where: { id: id.data, rol: "ESTUDIANTE" },
+    select: { id: true, nombre: true, email: true, rol: true },
+  });
+  if (!estudiante) {
+    return res.status(404).json({ error: "Estudiante no encontrado" });
+  }
+
+  const proyectos = await prisma.proyecto.findMany({
+    where: { perfil: { userId: id.data } },
+    orderBy: { createdAt: "desc" },
+    select: detalleSelect,
+  });
+  res.json({ estudiante, proyectos });
+});

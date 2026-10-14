@@ -7,6 +7,7 @@ import { apiReference } from "@scalar/express-api-reference";
 import { pingRouter } from "./routes/ping";
 import { authRouter } from "./routes/auth";
 import { perfilRouter } from "./routes/perfil";
+import { perfilesRouter } from "./routes/perfiles";
 import { proyectosRouter } from "./routes/proyectos";
 import { validacionesRouter } from "./routes/validaciones";
 import { usuariosRouter } from "./routes/usuarios";
@@ -125,6 +126,7 @@ app.use("/api/v1/perfil", perfilRouter);
 app.use("/api/v1/proyectos", proyectosRouter);
 app.use("/api/v1/usuarios", usuariosRouter);
 app.use("/api/v1/validaciones", validacionesRouter);
+app.use("/api/v1/perfiles", perfilesRouter);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (

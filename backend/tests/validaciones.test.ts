@@ -48,6 +48,31 @@ describe("validación docente", () => {
     expect(r.status).toBe(403);
   });
 
+      it("el docente ve el portafolio completo de un estudiante y cualquier proyecto", async () => {
+     const reg = await request(app)
+      .post("/api/v1/auth/register")
+      .send({ nombre: "Ana López", email: "ana@gmail.com", password: "Clave12345" });
+     const est = reg.body.token as string;
+     const doc = await docente();
+     const a = await proyecto(est, "Proyecto A");
+      proyecto(est, "Proyecto B");
+     await request(app).post(`/api/v1/validaciones/${a}`).set(bearer(doc)).send({ estado: "VALIDADO" });
+
+    const lista = await request(app)
+      .get(`/api/v1/validaciones/estudiantes/${reg.body.user.id}/proyectos`)
+      .set(bearer(doc));
+       expect(lista.status).toBe(200);
+       expect(lista.body.proyectos).toHaveLength(2); // en cualquier estado
+
+       const uno = await request(app).get(`/api/v1/validaciones/proyectos/${a}`).set(bearer(doc));
+       expect(uno.status).toBe(200);
+       expect(uno.body.estudiante.email).toBe("ana@gmail.com");
+
+       expect((await request(app).get("/api/v1/validaciones/proyectos/99999").set(bearer(doc))).status).toBe(404);
+       expect((await request(app).get(`/api/v1/validaciones/proyectos/${a}`).set(bearer(est))).status).toBe(403);
+      });
+  });
+
   it("lista solo pendientes, con los datos del estudiante", async () => {
     const est = await estudiante("ana@gmail.com");
     const doc = await docente();
@@ -71,12 +96,12 @@ describe("validación docente", () => {
       .post(`/api/v1/validaciones/${id}`)
       .set(bearer(doc))
       .send({ estado: "VALIDADO", comentario: "Buen trabajo" });
-    expect(r.status).toBe(200);
-    expect(r.body.estadoValidacion).toBe("VALIDADO");
+     expect(r.status).toBe(200);
+     expect(r.body.estadoValidacion).toBe("VALIDADO");
 
-    const vista = await request(app).get(`/api/v1/proyectos/${id}`).set(bearer(est));
-    expect(vista.body.estadoValidacion).toBe("VALIDADO");
-    expect(vista.body.validacion.comentario).toBe("Buen trabajo");
+     const vista = await request(app).get(`/api/v1/proyectos/${id}`).set(bearer(est));
+     expect(vista.body.estadoValidacion).toBe("VALIDADO");
+     expect(vista.body.validacion.comentario).toBe("Buen trabajo");
   });
 
   it("rechazar exige comentario", async () => {
@@ -90,8 +115,8 @@ describe("validación docente", () => {
       .post(`/api/v1/validaciones/${id}`)
       .set(bearer(doc))
       .send({ estado: "RECHAZADO", comentario: "Falta el README" });
-    expect(con.status).toBe(200);
-    expect(con.body.estadoValidacion).toBe("RECHAZADO");
+     expect(con.status).toBe(200);
+     expect(con.body.estadoValidacion).toBe("RECHAZADO");
   });
 
   it("409 si ya fue evaluado, 404 si no existe, 400 con datos inválidos", async () => {
@@ -126,4 +151,3 @@ describe("validación docente", () => {
     const lista = await request(app).get("/api/v1/validaciones/pendientes").set(bearer(doc));
     expect(lista.body.map((p: { id: number }) => p.id)).toContain(id);
   });
-});

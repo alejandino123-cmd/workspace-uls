@@ -19,6 +19,6 @@ export async function verifyGoogleToken(idToken: string): Promise<GoogleIdentity
     sub: p.sub,
     email: p.email.toLowerCase(),
     emailVerified: p.email_verified === true,
-    nombre: p.name ?? p.email.split("@")[0],
+    nombre: p.name ?? p.email.split("@")[0] ?? p.email,
   };
 }
