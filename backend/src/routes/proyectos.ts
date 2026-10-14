@@ -48,6 +48,7 @@ const proyectoSelect = {
   estadoValidacion: true,
   createdAt: true,
   updatedAt: true,
+  validacion: { select: { comentario: true, createdAt: true } },
 } as const;
 
 // El perfil se crea al primer uso (mismo patrón get-or-create de /perfil)
@@ -125,6 +126,7 @@ proyectosRouter.post("/", async (req: AuthRequest, res) => {
     data: { perfilId, ...parsed.data },
     select: proyectoSelect,
   });
+  
   res.status(201).json(proyecto);
 });
 
@@ -133,6 +135,7 @@ proyectosRouter.get("/", async (req: AuthRequest, res) => {
     where: { perfil: { userId: req.user!.id } },
     orderBy: { createdAt: "desc" },
     select: proyectoSelect,
+
   });
   res.json(proyectos);
 });
@@ -216,14 +219,19 @@ proyectosRouter.put("/:id", async (req: AuthRequest, res) => {
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
 
   // updateMany permite filtrar por dueño en la misma consulta
-  const { count } = await prisma.proyecto.updateMany({
-    where: { id, perfil: { userId: req.user!.id } },
-    data: { ...parsed.data, estadoValidacion: "PENDIENTE" },
-  });
-  if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
+    const count = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.proyecto.updateMany({
+      where: { id, perfil: { userId: req.user!.id } },
+      data: { ...parsed.data, estadoValidacion: "PENDIENTE" },
+    });
+    if (count > 0) await tx.validacionDocente.deleteMany({ where: { proyectoId: id } });
+    return count;
+   });
+    if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
+    if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
 
-  const proyecto = await prisma.proyecto.findUnique({ where: { id }, select: proyectoSelect });
-  res.json(proyecto);
+    const proyecto = await prisma.proyecto.findUnique({ where: { id }, select: proyectoSelect });
+    res.json(proyecto);
 });
 
 proyectosRouter.delete("/:id", async (req: AuthRequest, res) => {

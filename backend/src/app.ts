@@ -8,6 +8,7 @@ import { pingRouter } from "./routes/ping";
 import { authRouter } from "./routes/auth";
 import { perfilRouter } from "./routes/perfil";
 import { proyectosRouter } from "./routes/proyectos";
+import { validacionesRouter } from "./routes/validaciones";
 import { usuariosRouter } from "./routes/usuarios";
 
 const openApiSpec = swaggerJsdoc({
@@ -61,15 +62,15 @@ const openApiSpec = swaggerJsdoc({
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },
             validacion: {
-              type: "object",
-              nullable: true,
-              properties: {
-                comentario: { type: "string", nullable: true },
-                createdAt: { type: "string", format: "date-time" },
-              },
-            },
+             type: "object",
+             nullable: true,
+             properties: {
+             comentario: { type: "string", nullable: true },
+             createdAt: { type: "string", format: "date-time" },
+           }, 
           },
         },
+      },
         AuthResponse: {
           type: "object",
           properties: {
@@ -123,8 +124,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/perfil", perfilRouter);
 app.use("/api/v1/proyectos", proyectosRouter);
 app.use("/api/v1/usuarios", usuariosRouter);
-// Cuando crees routes/validaciones.ts, agrega aquí:
-// app.use("/api/v1/validaciones", validacionesRouter);
+app.use("/api/v1/validaciones", validacionesRouter);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (
