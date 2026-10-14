@@ -9,4 +9,4 @@ if (!testUrl) {
 
 process.env.DATABASE_URL = testUrl;
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto-solo-para-pruebas";
-process.env.EMAIL_DOMAIN = "";
+process.env.GOOGLE_CLIENT_ID = "test-client-id";
