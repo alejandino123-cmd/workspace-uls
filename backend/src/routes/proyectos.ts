@@ -52,14 +52,13 @@ const proyectoSelect = {
 } as const;
 
 // El perfil se crea al primer uso (mismo patrón get-or-create de /perfil)
-async function perfilIdDe(userId: number) {
-  const perfil = await prisma.perfilEstudiante.upsert({
+async function perfilDe(userId: number) {
+  return prisma.perfilEstudiante.upsert({
     where: { userId },
     create: { userId },
     update: {},
-    select: { id: true },
+    select: { id: true, carnet: true },
   });
-  return perfil.id;
 }
 
 function parseId(raw: unknown, res: Response) {
@@ -101,7 +100,7 @@ function parseId(raw: unknown, res: Response) {
  *             schema: { $ref: '#/components/schemas/Proyecto' }
  *       400: { $ref: '#/components/responses/DatosInvalidos' }
  *       401: { $ref: '#/components/responses/NoAutenticado' }
- *       403: { $ref: '#/components/responses/SinPermiso' }
+ *       403: { description: "Sin permiso, o carnet no registrado (code CARNET_REQUERIDO)" }
  *   get:
  *     tags: [Proyectos]
  *     summary: Listar mis proyectos
@@ -115,18 +114,25 @@ function parseId(raw: unknown, res: Response) {
  *               type: array
  *               items: { $ref: '#/components/schemas/Proyecto' }
  *       401: { $ref: '#/components/responses/NoAutenticado' }
- *       403: { $ref: '#/components/responses/SinPermiso' }
+ *       403: { description: "Sin permiso, o carnet no registrado (code CARNET_REQUERIDO)" }
  */
 proyectosRouter.post("/", async (req: AuthRequest, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
 
-  const perfilId = await perfilIdDe(req.user!.id);
+  const perfil = await perfilDe(req.user!.id);
+  if (!perfil.carnet) {
+    return res.status(403).json({
+      error: "Registra tu carnet en tu perfil antes de enviar proyectos",
+      code: "CARNET_REQUERIDO",
+    });
+  }
+
   const proyecto = await prisma.proyecto.create({
-    data: { perfilId, ...parsed.data },
+    data: { perfilId: perfil.id, ...parsed.data },
     select: proyectoSelect,
   });
-  
+
   res.status(201).json(proyecto);
 });
 
@@ -157,7 +163,7 @@ proyectosRouter.get("/", async (req: AuthRequest, res) => {
  *             schema: { $ref: '#/components/schemas/Proyecto' }
  *       400: { $ref: '#/components/responses/DatosInvalidos' }
  *       401: { $ref: '#/components/responses/NoAutenticado' }
- *       403: { $ref: '#/components/responses/SinPermiso' }
+ *       403: { description: "Sin permiso, o carnet no registrado (code CARNET_REQUERIDO)" }
  *       404: { description: No existe o no es tuyo }
  *   put:
  *     tags: [Proyectos]
@@ -187,7 +193,7 @@ proyectosRouter.get("/", async (req: AuthRequest, res) => {
  *             schema: { $ref: '#/components/schemas/Proyecto' }
  *       400: { $ref: '#/components/responses/DatosInvalidos' }
  *       401: { $ref: '#/components/responses/NoAutenticado' }
- *       403: { $ref: '#/components/responses/SinPermiso' }
+ *       403: { description: "Sin permiso, o carnet no registrado (code CARNET_REQUERIDO)" }
  *       404: { description: No existe o no es tuyo }
  *   delete:
  *     tags: [Proyectos]
@@ -198,7 +204,7 @@ proyectosRouter.get("/", async (req: AuthRequest, res) => {
  *     responses:
  *       204: { description: Eliminado }
  *       401: { $ref: '#/components/responses/NoAutenticado' }
- *       403: { $ref: '#/components/responses/SinPermiso' }
+ *       403: { description: "Sin permiso, o carnet no registrado (code CARNET_REQUERIDO)" }
  *       404: { description: No existe o no es tuyo }
  */
 proyectosRouter.get("/:id", async (req: AuthRequest, res) => {
@@ -218,20 +224,19 @@ proyectosRouter.put("/:id", async (req: AuthRequest, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
 
-  // updateMany permite filtrar por dueño en la misma consulta
-    const count = await prisma.$transaction(async (tx) => {
+    // updateMany permite filtrar por dueño en la misma consulta
+  const count = await prisma.$transaction(async (tx) => {
     const { count } = await tx.proyecto.updateMany({
       where: { id, perfil: { userId: req.user!.id } },
       data: { ...parsed.data, estadoValidacion: "PENDIENTE" },
     });
-    if (count > 0) await tx.validacionDocente.deleteMany({ where: { proyectoId: id } });
+    if (count > 0) await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
     return count;
-   });
-    if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
-    if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
+  });
+  if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
 
-    const proyecto = await prisma.proyecto.findUnique({ where: { id }, select: proyectoSelect });
-    res.json(proyecto);
+  const proyecto = await prisma.proyecto.findUnique({ where: { id }, select: proyectoSelect });
+  res.json(proyecto);
 });
 
 proyectosRouter.delete("/:id", async (req: AuthRequest, res) => {

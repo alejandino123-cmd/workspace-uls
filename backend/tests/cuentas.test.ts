@@ -17,7 +17,7 @@ const TOKEN = "token-de-google-de-prueba-123";
 const API = "/api/v1";
 
 async function limpiarBD() {
-  await prisma.validacionDocente.deleteMany();
+  await prisma.validacionProyecto.deleteMany();
   await prisma.proyecto.deleteMany();
   await prisma.perfilEstudiante.deleteMany();
   await prisma.user.deleteMany();
@@ -190,10 +190,10 @@ describe("POST /usuarios (solo COORDINACION)", () => {
     return r.send(body);
   };
   const docente = {
-    nombre: "Profe Uno",
-    email: "profe@uls.edu.sv",
+    nombre: "Empresa Uno",
+    email: "empresa@uls.edu.sv",
     password: "Profe12345",
-    rol: "DOCENTE",
+    rol: "EMPRESA", // se puede crear EMPRESA o DOCENTE, no ESTUDIANTE ni COORDINACION
   };
 
   it("401 sin token", async () => {
@@ -205,16 +205,16 @@ describe("POST /usuarios (solo COORDINACION)", () => {
     expect((await crear(reg.body.token, docente)).status).toBe(403);
   });
 
-  it("201 crea un DOCENTE que puede iniciar sesión", async () => {
+  it("201 crea una EMPRESA que puede iniciar sesión", async () => {
     const token = await crearCoordinador();
     const res = await crear(token, docente);
     expect(res.status).toBe(201);
-    expect(res.body.user.rol).toBe("DOCENTE");
+    expect(res.body.user.rol).toBe("EMPRESA");
     expect(res.body.user.passwordHash).toBeUndefined();
 
     const l = await login(docente.email, docente.password);
     expect(l.status).toBe(200);
-    expect(l.body.user.rol).toBe("DOCENTE");
+    expect(l.body.user.rol).toBe("EMPRESA");
   });
 
   it("201 crea una cuenta EMPRESA", async () => {
@@ -228,19 +228,25 @@ describe("POST /usuarios (solo COORDINACION)", () => {
     expect(res.body.user.rol).toBe("EMPRESA");
   });
 
-  it("409 si el correo ya existe", async () => {
-    const token = await crearCoordinador();
-    await crear(token, docente);
-    expect((await crear(token, docente)).status).toBe(409);
-  });
+  it("400 si intenta crear un ESTUDIANTE o un DOCENTE por esta vía", async () => {
+  const token = await crearCoordinador();
+  for (const rol of ["ESTUDIANTE", "DOCENTE"]) {
+    const res = await crear(token, { ...docente, rol });
+    expect(res.status).toBe(400);
+  }
+});
 
-  it("400 si intenta crear ESTUDIANTE o COORDINACION por esta vía", async () => {
-    const token = await crearCoordinador();
-    for (const rol of ["ESTUDIANTE", "COORDINACION"]) {
-      const res = await crear(token, { ...docente, rol });
-      expect(res.status).toBe(400);
-    }
+it("201 crea otra cuenta COORDINACION", async () => {
+  const token = await crearCoordinador();
+  const res = await crear(token, {
+    ...docente,
+    email: "otra.coordinacion@ejemplo.com",
+    rol: "COORDINACION",
   });
+  expect(res.status).toBe(201);
+  expect(res.body.user.rol).toBe("COORDINACION");
+  expect(res.body.user.passwordHash).toBeUndefined();
+});
 
   it("400 si la contraseña es muy corta", async () => {
     const token = await crearCoordinador();

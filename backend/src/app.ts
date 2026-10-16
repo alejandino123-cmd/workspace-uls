@@ -35,6 +35,7 @@ const openApiSpec = swaggerJsdoc({
           type: "object",
           properties: {
             id: { type: "integer", example: 1 },
+            carnet: { type: "string", nullable: true, example: "AB2423" },
             porcentajeAvance: { type: "integer", minimum: 0, maximum: 100, example: 60 },
             historialAcademico: { type: "string", nullable: true },
             disponibilidad: {

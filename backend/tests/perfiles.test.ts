@@ -17,11 +17,15 @@ async function proyecto(token: string, titulo: string) {
     .post("/api/v1/proyectos")
     .set(bearer(token))
     .send({ titulo, descripcion: "Descripción de prueba del proyecto." });
-  return r.body.id as number;
+  // si falla (por ejemplo, 403 CARNET_REQUERIDO) el error se ve claro en vez de un id undefined
+  if (r.status !== 201) {
+    throw new Error(`No se pudo crear el proyecto (${r.status}): ${JSON.stringify(r.body)}`);
+  }
+  return (r.body.proyecto?.id ?? r.body.id) as number;
 }
 
 beforeEach(async () => {
-  await prisma.validacionDocente.deleteMany();
+  await prisma.validacionProyecto.deleteMany();
   await prisma.user.deleteMany();
 });
 
@@ -35,7 +39,12 @@ describe("GET /api/v1/perfiles/:userId (público)", () => {
     await request(app)
       .put("/api/v1/perfil")
       .set(bearer(est.token))
-      .send({ porcentajeAvance: 70, habilidades: ["Vue.js", "Node.js"], historialAcademico: "Dato privado" });
+      .send({
+        carnet: "CS-2026-001",
+        porcentajeAvance: 70,
+        habilidades: ["Vue.js", "Node.js"],
+        historialAcademico: "Dato privado",
+      });
     const validado = await proyecto(est.token, "Proyecto validado");
     await proyecto(est.token, "Proyecto pendiente");
     await prisma.proyecto.update({ where: { id: validado }, data: { estadoValidacion: "VALIDADO" } });
@@ -45,19 +54,21 @@ describe("GET /api/v1/perfiles/:userId (público)", () => {
     expect(r.body.estudiante).toEqual({ id: est.id, nombre: "Ana López" });
     expect(r.body.perfil.habilidades).toEqual(["Vue.js", "Node.js"]);
     expect(r.body.perfil.porcentajeAvance).toBe(70);
+    expect(r.body.perfil.carnet).toBeUndefined();
     expect(r.body.proyectos.map((p: { titulo: string }) => p.titulo)).toEqual(["Proyecto validado"]);
   });
 
-  it("nunca expone correo ni historial académico", async () => {
+  it("nunca expone correo, carnet ni historial académico", async () => {
     const est = await estudiante("ana@gmail.com");
     await request(app)
       .put("/api/v1/perfil")
       .set(bearer(est.token))
-      .send({ historialAcademico: "Dato privado" });
+      .send({ carnet: "CS-2026-001", historialAcademico: "Dato privado" });
 
     const r = await request(app).get(`/api/v1/perfiles/${est.id}`);
     const texto = JSON.stringify(r.body);
     expect(texto).not.toContain("ana@gmail.com");
+    expect(texto).not.toContain("CS-2026-001");
     expect(texto).not.toContain("Dato privado");
     expect(texto).not.toContain("passwordHash");
   });
@@ -72,7 +83,7 @@ describe("GET /api/v1/perfiles/:userId (público)", () => {
 
   it("404 si no existe o no es estudiante; 400 con id inválido", async () => {
     await prisma.user.create({
-      data: { email: "doc@uls.edu.sv", nombre: "Doc", rol: "DOCENTE", passwordHash: "x" },
+      data: { email: "doc@uls.edu.sv", nombre: "Doc", rol: "COORDINACION", passwordHash: "x" },
     });
     const doc = await prisma.user.findUnique({ where: { email: "doc@uls.edu.sv" } });
     expect((await request(app).get(`/api/v1/perfiles/${doc!.id}`)).status).toBe(404);

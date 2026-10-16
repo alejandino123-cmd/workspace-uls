@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma";
 import { config } from "../config";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { verifyGoogleToken } from "../lib/google";
-import { validationError } from "../lib/validation";
+import { carnetSchema, validationError } from "../lib/validation";
 
 export const authRouter = Router();
 
@@ -16,6 +16,7 @@ const registerSchema = z.object({
   nombre: z.string().trim().min(2, "El nombre es muy corto").max(100),
   email: z.string().trim().toLowerCase().email("Correo inválido"),
   password: z.string().min(8, "Mínimo 8 caracteres").max(72, "Máximo 72 caracteres"),
+  carnet: carnetSchema.optional(), // opcional para COORDINACION y EMPRESA
 });
 
 const loginSchema = z.object({
@@ -59,6 +60,7 @@ function signToken(user: { id: number; rol: string }) {
  *               nombre: { type: string, example: Ana López }
  *               email: { type: string, format: email, example: ana@ejemplo.com }
  *               password: { type: string, minLength: 8, example: Clave12345 }
+ *               carnet: { type: string, example: AB2453 }
  *     responses:
  *       201:
  *         description: Usuario creado
@@ -82,16 +84,21 @@ function signToken(user: { id: number; rol: string }) {
 authRouter.post("/register", async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
-  const { nombre, email, password } = parsed.data;
+  const { nombre, email, password, carnet } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ error: "El correo ya está registrado" });
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: { nombre, email, passwordHash },
-    select: userSelect,
-  });
+  if (carnet) {
+  const carnetUsado = await prisma.perfilEstudiante.findUnique({ where: { carnet } });
+  if (carnetUsado) return res.status(409).json({ error: "El carnet ya está registrado" });
+}
+
+const passwordHash = await bcrypt.hash(password, 10);
+const user = await prisma.user.create({
+  data: { nombre, email, passwordHash, ...(carnet ? { perfil: { create: { carnet } } } : {}) },
+  select: userSelect,
+ });
 
   res.status(201).json({ user, token: signToken(user) });
 });

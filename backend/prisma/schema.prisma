@@ -14,7 +14,6 @@ datasource db {
 }
 enum Rol {
   ESTUDIANTE
-  DOCENTE
   EMPRESA
   COORDINACION
 }
@@ -42,13 +41,14 @@ model User {
   updatedAt    DateTime @updatedAt
 
   perfil        PerfilEstudiante?
-  validaciones  ValidacionDocente[]
+  validaciones  ValidacionProyecto[]
 }
 
 model PerfilEstudiante {
   id                 Int             @id @default(autoincrement())
   userId             Int             @unique
   user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  carnet             String?          @unique
   porcentajeAvance   Int             @default(0)
   historialAcademico String?
   disponibilidad     Disponibilidad?
@@ -71,14 +71,14 @@ model Proyecto {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  validacion ValidacionDocente?
+  validacion ValidacionProyecto?
 }
-model ValidacionDocente {
-  id          Int      @id @default(autoincrement())
-  proyectoId  Int      @unique
-  proyecto    Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
-  docenteId   Int
-  docente     User     @relation(fields: [docenteId], references: [id])
-  comentario  String?
-  createdAt   DateTime @default(now())
+model ValidacionProyecto {
+  id            Int      @id @default(autoincrement())
+  proyectoId    Int      @unique
+  proyecto      Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  coordinadorId Int
+  coordinador   User     @relation(fields: [coordinadorId], references: [id])
+  comentario    String?
+  createdAt     DateTime @default(now())
 }

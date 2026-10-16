@@ -12,7 +12,7 @@ const crearSchema = z.object({
   nombre: z.string().trim().min(2).max(100),
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(8).max(72),
-  rol: z.enum(["DOCENTE", "EMPRESA"]), // nunca COORDINACION ni ESTUDIANTE desde aquí
+  rol: z.enum(["COORDINACION", "EMPRESA"]), 
 });
 
 /**
@@ -20,7 +20,7 @@ const crearSchema = z.object({
  * /api/v1/usuarios:
  *   post:
  *     tags: [Usuarios]
- *     summary: Crear una cuenta de docente o empresa
+ *     summary: Crear una cuenta de coordinación o empresa
  *     description: Solo COORDINACION. La contraseña inicial debe cambiarse con PUT /auth/password.
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
@@ -34,7 +34,7 @@ const crearSchema = z.object({
  *               nombre: { type: string, example: "Ing. Carlos Pérez" }
  *               email: { type: string, format: email }
  *               password: { type: string, minLength: 8 }
- *               rol: { type: string, enum: [DOCENTE, EMPRESA] }
+ *               rol: { type: string, enum: [COORDINACION, EMPRESA] }
  *     responses:
  *       201:
  *         description: Cuenta creada

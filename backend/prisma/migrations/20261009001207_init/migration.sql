@@ -57,14 +57,14 @@ CREATE TABLE "Proyecto" (
 );
 
 -- CreateTable
-CREATE TABLE "ValidacionDocente" (
+CREATE TABLE "ValidacionProyecto" (
     "id" SERIAL NOT NULL,
     "proyectoId" INTEGER NOT NULL,
     "docenteId" INTEGER NOT NULL,
     "comentario" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "ValidacionDocente_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ValidacionProyecto_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -93,7 +93,7 @@ CREATE UNIQUE INDEX "PerfilEstudiante_userId_key" ON "PerfilEstudiante"("userId"
 CREATE UNIQUE INDEX "Habilidad_nombre_key" ON "Habilidad"("nombre");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ValidacionDocente_proyectoId_key" ON "ValidacionDocente"("proyectoId");
+CREATE UNIQUE INDEX "ValidacionProyecto_proyectoId_key" ON "ValidacionProyecto"("proyectoId");
 
 -- CreateIndex
 CREATE INDEX "_HabilidadToPerfilEstudiante_B_index" ON "_HabilidadToPerfilEstudiante"("B");
@@ -108,10 +108,10 @@ ALTER TABLE "PerfilEstudiante" ADD CONSTRAINT "PerfilEstudiante_userId_fkey" FOR
 ALTER TABLE "Proyecto" ADD CONSTRAINT "Proyecto_perfilId_fkey" FOREIGN KEY ("perfilId") REFERENCES "PerfilEstudiante"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ValidacionDocente" ADD CONSTRAINT "ValidacionDocente_proyectoId_fkey" FOREIGN KEY ("proyectoId") REFERENCES "Proyecto"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ValidacionProyecto" ADD CONSTRAINT "ValidacionProyecto_proyectoId_fkey" FOREIGN KEY ("proyectoId") REFERENCES "Proyecto"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ValidacionDocente" ADD CONSTRAINT "ValidacionDocente_docenteId_fkey" FOREIGN KEY ("docenteId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ValidacionProyecto" ADD CONSTRAINT "ValidacionProyecto_docenteId_fkey" FOREIGN KEY ("docenteId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_HabilidadToPerfilEstudiante" ADD CONSTRAINT "_HabilidadToPerfilEstudiante_A_fkey" FOREIGN KEY ("A") REFERENCES "Habilidad"("id") ON DELETE CASCADE ON UPDATE CASCADE;
