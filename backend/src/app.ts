@@ -16,7 +16,7 @@ const openApiSpec = swaggerJsdoc({
   definition: {
     openapi: "3.0.3",
     info: { title: "Workspace ULS API", version: "1.0.0" },
-    servers: [{ url: "http://localhost:3000" }],
+    servers: [{ url: process.env.PUBLIC_URL ?? "http://localhost:3000" }],
     components: {
       securitySchemes: {
         bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
