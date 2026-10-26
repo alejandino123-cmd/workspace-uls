@@ -14,7 +14,7 @@ function salir() {
 
 <template>
   <div style="padding: 2rem">
-    <h1>Hola, {{ authStore.user?.name }}</h1>
+<h1>Hola, {{ authStore.user?.nombre }}</h1>
     <p>Rol: {{ authStore.rol }}</p>
     <Button label="Cerrar sesión" icon="pi pi-sign-out" severity="secondary" @click="salir" />
   </div>

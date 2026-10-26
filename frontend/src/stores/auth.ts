@@ -1,23 +1,13 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-
-export type Rol = 'estudiante' | 'docente' | 'admin'
+import { api } from '../service/api'
 
 export interface Usuario {
   id: number
-  name: string
+  nombre: string
   email: string
-  rol: Rol
+  rol: string
 }
-
-// Datos falsos (se reemplazan cuando esté la API)
-const USUARIOS_MOCK = [
-  { id: 1, name: 'Ana Estudiante', email: 'estudiante@uls.edu.sv', password: '123456', rol: 'estudiante' as Rol },
-  { id: 2, name: 'Carlos Docente', email: 'docente@uls.edu.sv', password: '123456', rol: 'docente' as Rol },
-  { id: 3, name: 'Admin ULS', email: 'admin@uls.edu.sv', password: '123456', rol: 'admin' as Rol },
-]
-
-const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token'))
@@ -27,24 +17,19 @@ export const useAuthStore = defineStore('auth', () => {
   const rol = computed(() => user.value?.rol ?? null)
 
   async function login(email: string, password: string) {
-    await esperar(600) // simula la espera de la API
+    const { data } = await api.post('/auth/login', { email, password })
 
-    const encontrado = USUARIOS_MOCK.find(
-      (u) => u.email === email && u.password === password,
-    )
-    if (!encontrado) {
-      throw new Error('Credenciales incorrectas')
-    }
+    // Ajustar cuando veamos la respuesta real
+    token.value = data.token ?? data.data?.token
+    user.value = data.user ?? data.data?.user
 
-    const { password: _omitida, ...usuario } = encontrado
-    token.value = `mock-token-${usuario.id}`
-    user.value = usuario
-
-    localStorage.setItem('token', token.value)
-    localStorage.setItem('user', JSON.stringify(usuario))
+    localStorage.setItem('token', token.value!)
+    localStorage.setItem('user', JSON.stringify(user.value))
+    
   }
 
-  // Recupera la sesión al recargar la página
+  
+
   async function fetchUser() {
     const guardado = localStorage.getItem('user')
     if (token.value && guardado) {
@@ -52,6 +37,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+async function register(nombre: string, email: string, password: string) {
+  await api.post('/auth/register', { nombre, email, password })
+  await login(email, password)
+}
   function logout() {
     token.value = null
     user.value = null
@@ -59,5 +48,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  return { token, user, isAuthenticated, rol, login, fetchUser, logout }
+  return { token, user, isAuthenticated, rol, login, fetchUser, register, logout }
 })
