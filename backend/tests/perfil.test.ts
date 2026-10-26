@@ -34,7 +34,7 @@ describe("GET /perfil", () => {
 
   it("rechaza a un usuario que no es estudiante (403)", async () => {
     await sesion();
-    await prisma.user.update({ where: { email: datos.email }, data: { rol: "DOCENTE" } });
+    await prisma.user.update({ where: { email: datos.email }, data: { rol: "EMPRESA" } });
     // el rol viaja dentro del token: hay que iniciar sesión de nuevo para que cambie
     const login = await request(app)
       .post("/api/v1/auth/login")
@@ -48,6 +48,7 @@ describe("GET /perfil", () => {
     const res = await request(app).get(PERFIL).set(auth(token));
     expect(res.status).toBe(200);
     expect(res.body.perfil).toMatchObject({
+      carnet: null,
       porcentajeAvance: 0,
       historialAcademico: null,
       disponibilidad: null,
@@ -164,5 +165,50 @@ describe("PUT /perfil", () => {
     const token = await sesion();
     const res = await request(app).put(PERFIL).set(auth(token)).send({});
     expect(res.status).toBe(400);
+  });
+});
+
+describe("PUT /perfil — carnet", () => {
+  it("guarda el carnet normalizado (sin espacios y en mayúsculas) y lo conserva", async () => {
+    const token = await sesion();
+    const res = await request(app)
+      .put(PERFIL)
+      .set(auth(token))
+      .send({ carnet: "  cs-2026-001 " });
+    expect(res.status).toBe(200);
+    expect(res.body.perfil.carnet).toBe("CS-2026-001");
+
+    const otra = await request(app).get(PERFIL).set(auth(token));
+    expect(otra.body.perfil.carnet).toBe("CS-2026-001");
+  });
+
+  it("no toca el carnet si no se envía", async () => {
+    const token = await sesion();
+    await request(app).put(PERFIL).set(auth(token)).send({ carnet: "CS-2026-001" });
+    const res = await request(app).put(PERFIL).set(auth(token)).send({ porcentajeAvance: 20 });
+    expect(res.status).toBe(200);
+    expect(res.body.perfil.carnet).toBe("CS-2026-001");
+    expect(res.body.perfil.porcentajeAvance).toBe(20);
+  });
+
+  it("permite volver a enviar el mismo carnet sin dar conflicto", async () => {
+    const token = await sesion();
+    await request(app).put(PERFIL).set(auth(token)).send({ carnet: "CS-2026-001" });
+    const res = await request(app).put(PERFIL).set(auth(token)).send({ carnet: "CS-2026-001" });
+    expect(res.status).toBe(200);
+  });
+
+  it("rechaza un carnet con formato inválido (400)", async () => {
+    const token = await sesion();
+    const res = await request(app).put(PERFIL).set(auth(token)).send({ carnet: "ab" });
+    expect(res.status).toBe(400);
+    expect(res.body.detalles[0].campo).toBe("carnet");
+  });
+
+  it("rechaza un carnet con caracteres no permitidos (400)", async () => {
+    const token = await sesion();
+    const res = await request(app).put(PERFIL).set(auth(token)).send({ carnet: "CS 2026/001!" });
+    expect(res.status).toBe(400);
+    expect(res.body.detalles[0].campo).toBe("carnet");
   });
 });

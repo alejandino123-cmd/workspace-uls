@@ -32,3 +32,9 @@ export const etiquetasSchema = z
   )
   .max(30, "Máximo 30 elementos")
   .transform(sinRepetidas);
+  
+  export const carnetSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z0-9-]{4,20}$/, "Carnet inválido (4 a 20 caracteres: letras, números o guion)");

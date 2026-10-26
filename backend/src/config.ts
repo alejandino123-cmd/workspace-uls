@@ -9,5 +9,5 @@ function required(name: string): string {
 export const config = {
   jwtSecret: required("JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "1d",
-  emailDomain: (process.env.EMAIL_DOMAIN ?? "").trim().toLowerCase(),
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
 };

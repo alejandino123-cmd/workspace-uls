@@ -13,6 +13,7 @@ module.exports = {
   },
   moduleNameMapper: {
     "^@scalar/express-api-reference$": "<rootDir>/tests/stubs/scalar.ts",
+    "(.*)/lib/google$": "<rootDir>/tests/stubs/google.ts",
   },
   globalSetup: "<rootDir>/tests/global-setup.ts",
   setupFiles: ["<rootDir>/tests/setup-env.ts"],
