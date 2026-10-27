@@ -34,7 +34,7 @@ model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
   passwordHash String?
-  googleId     String?   @unique
+  tokenVersion Int    @default(0) // sube al cambiar la contraseña: invalida sesiones anteriores
   nombre       String
   rol          Rol      @default(ESTUDIANTE)
   createdAt    DateTime @default(now())

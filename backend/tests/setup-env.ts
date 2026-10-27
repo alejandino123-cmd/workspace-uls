@@ -3,10 +3,10 @@ import "dotenv/config";
 const testUrl = process.env.DATABASE_URL_TEST;
 if (!testUrl) {
   throw new Error(
-    "DATABASE_URL_TEST: \"postgresql://workspace:lavables@localhost:5432/workspace_test\"",
+    "Falta DATABASE_URL_TEST (revisa tu .env; ver .env.example)",
   );
 }
 
 process.env.DATABASE_URL = testUrl;
 process.env.JWT_SECRET = process.env.JWT_SECRET || "secreto-solo-para-pruebas";
-process.env.GOOGLE_CLIENT_ID = "test-client-id";
+process.env.LOGIN_MAX_INTENTOS = "100000";

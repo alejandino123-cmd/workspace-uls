@@ -5,9 +5,9 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { config } from "../config";
 import { requireAuth, AuthRequest } from "../middleware/auth";
-import { verifyGoogleToken } from "../lib/google";
 import { carnetSchema, validationError } from "../lib/validation";
 import { correoInstitucionalSchema, esCorreoInstitucional } from "../lib/institucional";
+import { limitarPorCorreo, limitarPorUsuario } from "../lib/rate-limit";
 
 export const authRouter = Router();
 
@@ -25,12 +25,6 @@ const loginSchema = z.object({
   password: z.string().min(1, "La contraseña es obligatoria"),
 });
 
-// El carnet solo se pide para crear una cuenta nueva; las cuentas existentes se vinculan sin él
-const googleSchema = z.object({
-  idToken: z.string().min(20),
-  carnet: carnetSchema.optional(),
-});
-
 const passwordSchema = z
   .object({
     actual: z.string().min(1),
@@ -41,8 +35,12 @@ const passwordSchema = z
     path: ["nueva"],
   });
 
-function signToken(user: { id: number; rol: string }) {
-  return jwt.sign({ rol: user.rol }, config.jwtSecret, {
+// Hash de referencia: se compara siempre para que el tiempo de respuesta no revele si el correo existe
+const HASH_FICTICIO = bcrypt.hashSync("contraseña-ficticia-sin-uso", 10);
+
+// "ver" permite invalidar el token al cambiar la contraseña (ver requireAuth)
+function signToken(user: { id: number; rol: string; tokenVersion: number }) {
+  return jwt.sign({ rol: user.rol, ver: user.tokenVersion }, config.jwtSecret, {
     subject: String(user.id),
     expiresIn: config.jwtExpiresIn as SignOptions["expiresIn"],
   });
@@ -86,7 +84,7 @@ function signToken(user: { id: number; rol: string }) {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", limitarPorCorreo, async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
   const { nombre, email, password, carnet } = parsed.data;
@@ -98,12 +96,13 @@ authRouter.post("/register", async (req, res) => {
   if (carnetUsado) return res.status(409).json({ error: "El carnet ya está registrado" });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
+  const creado = await prisma.user.create({
     data: { nombre, email, passwordHash, perfil: { create: { carnet } } },
-    select: userSelect,
+    select: { ...userSelect, tokenVersion: true },
   });
+  const { tokenVersion, ...user } = creado;
 
-  res.status(201).json({ user, token: signToken(user) });
+  res.status(201).json({ user, token: signToken({ ...user, tokenVersion }) });
 });
 
 /**
@@ -142,146 +141,21 @@ authRouter.post("/register", async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", limitarPorCorreo, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
   const { email, password } = parsed.data;
 
   const found = await prisma.user.findUnique({ where: { email } });
-  // Una cuenta creada solo con Google no tiene contraseña: se trata igual que credenciales erróneas
-  const valid = found?.passwordHash ? await bcrypt.compare(password, found.passwordHash) : false;
-  if (!found || !valid) return res.status(401).json({ error: "Credenciales inválidas" });
-
-  const user = { id: found.id, email: found.email, nombre: found.nombre, rol: found.rol };
-  res.json({ user, token: signToken(user) });
-});
-
-/**
- * @openapi
- * /api/v1/auth/google:
- *   post:
- *     summary: Iniciar sesión (o registrarse) con Google
- *     description: >
- *       Recibe el ID token que entrega Google Identity Services al frontend.
- *       Si el correo ya existe, se vincula a la misma cuenta. Si no existe, se crea un ESTUDIANTE
- *       y es obligatorio un correo institucional de Google Workspace y el carnet
- *       (si falta, responde 400 con code CARNET_REQUERIDO; reenvía la petición con `carnet`).
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [idToken]
- *             properties:
- *               idToken: { type: string }
- *               carnet: { type: string, example: AB2453, description: Obligatorio solo para cuentas nuevas }
- *     responses:
- *       200:
- *         description: Sesión iniciada con una cuenta existente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
- *       201:
- *         description: Cuenta de estudiante creada
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/AuthResponse'
- *       400:
- *         description: Datos inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       401:
- *         description: Token de Google inválido o correo no verificado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Cuenta nueva sin correo institucional (code CORREO_NO_INSTITUCIONAL)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       409:
- *         description: El carnet ya está registrado por otro estudiante
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       503:
- *         description: Inicio de sesión con Google no configurado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-authRouter.post("/google", async (req, res) => {
-  if (!config.googleClientId) {
-    return res.status(503).json({ error: "El inicio de sesión con Google no está configurado" });
-  }
-  const parsed = googleSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json(validationError(parsed.error));
-
-  let identity;
-  try {
-    identity = await verifyGoogleToken(parsed.data.idToken);
-  } catch {
-    return res.status(401).json({ error: "Token de Google inválido" });
-  }
-  if (!identity.emailVerified) {
-    return res.status(401).json({ error: "El correo de la cuenta de Google no está verificado" });
-  }
-
-  // 1) ¿ya entró antes con Google?  2) ¿existe con ese correo?  3) cuenta nueva
-  let found = await prisma.user.findUnique({ where: { googleId: identity.sub } });
-  let created = false;
-
-  if (!found) {
-    const byEmail = await prisma.user.findUnique({ where: { email: identity.email } });
-    if (byEmail) {
-      // Vincula: es la misma persona porque Google garantiza que el correo es suyo
-      found = await prisma.user.update({
-        where: { id: byEmail.id },
-        data: { googleId: identity.sub },
-      });
-    } else {
-      // Cuenta nueva de estudiante: debe ser una cuenta institucional de Google Workspace
-      if (!esCorreoInstitucional(identity.email) || identity.hd !== config.dominioInstitucional) {
-        return res.status(403).json({
-          error: `Inicia sesión con tu correo institucional (@${config.dominioInstitucional})`,
-          code: "CORREO_NO_INSTITUCIONAL",
-        });
-      }
-      const { carnet } = parsed.data;
-      if (!carnet) {
-        return res.status(400).json({
-          error: "Registra tu carnet para crear tu cuenta",
-          code: "CARNET_REQUERIDO",
-        });
-      }
-      const carnetUsado = await prisma.perfilEstudiante.findUnique({ where: { carnet } });
-      if (carnetUsado) return res.status(409).json({ error: "El carnet ya está registrado" });
-
-      found = await prisma.user.create({
-        data: {
-          email: identity.email,
-          nombre: identity.nombre,
-          googleId: identity.sub,
-          perfil: { create: { carnet } },
-        },
-      });
-      created = true;
-    }
+  // Siempre se compara una contraseña, exista o no la cuenta, para no revelar cuál correo está registrado.
+  // Una cuenta sin contraseña se trata igual que credenciales erróneas.
+  const valida = await bcrypt.compare(password, found?.passwordHash ?? HASH_FICTICIO);
+  if (!found || !found.passwordHash || !valida) {
+    return res.status(401).json({ error: "Credenciales inválidas" });
   }
 
   const user = { id: found.id, email: found.email, nombre: found.nombre, rol: found.rol };
-  res.status(created ? 201 : 200).json({ user, token: signToken(user) });
+  res.json({ user, token: signToken({ ...user, tokenVersion: found.tokenVersion }) });
 });
 
 /**
@@ -318,14 +192,14 @@ authRouter.post("/google", async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-authRouter.put("/password", requireAuth, async (req: AuthRequest, res) => {
+authRouter.put("/password", requireAuth, limitarPorUsuario, async (req: AuthRequest, res) => {
   const parsed = passwordSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
 
   const found = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!found) return res.status(401).json({ error: "Usuario no encontrado" });
   if (!found.passwordHash) {
-    return res.status(400).json({ error: "Tu cuenta usa Google y no tiene contraseña" });
+    return res.status(400).json({ error: "Tu cuenta no tiene contraseña configurada" });
   }
   if (!(await bcrypt.compare(parsed.data.actual, found.passwordHash))) {
     return res.status(400).json({ error: "La contraseña actual no es correcta" });
@@ -333,7 +207,8 @@ authRouter.put("/password", requireAuth, async (req: AuthRequest, res) => {
 
   await prisma.user.update({
     where: { id: found.id },
-    data: { passwordHash: await bcrypt.hash(parsed.data.nueva, 10) },
+    // Sube tokenVersion: las sesiones abiertas con la contraseña anterior dejan de valer
+    data: { passwordHash: await bcrypt.hash(parsed.data.nueva, 10), tokenVersion: { increment: 1 } },
   });
   res.status(204).send();
 });

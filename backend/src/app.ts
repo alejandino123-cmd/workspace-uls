@@ -28,7 +28,7 @@ const openApiSpec = swaggerJsdoc({
             id: { type: "integer", example: 1 },
             email: { type: "string", format: "email", example: "ana@ejemplo.com" },
             nombre: { type: "string", example: "Ana López" },
-            rol: { type: "string", enum: ["ESTUDIANTE", "DOCENTE", "EMPRESA", "COORDINACION"] },
+            rol: { type: "string", enum: ["ESTUDIANTE", "EMPRESA", "COORDINACION"] },
           },
         },
         Perfil: {

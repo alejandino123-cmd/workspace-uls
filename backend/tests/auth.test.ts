@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "@jest/globals";
 import request from "supertest";
 import { app } from "../src/app";
+import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 
 const API = "/api/v1/auth";
@@ -152,3 +153,36 @@ describe("GET /auth/me", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("sesiones", () => {
+  it("cambiar la contraseña invalida el token anterior", async () => {
+    const reg = await registrar();
+    const h = { Authorization: `Bearer ${reg.token}` };
+
+    const cambio = await request(app)
+      .put(`${API}/password`)
+      .set(h)
+      .send({ actual: datos.password, nueva: "OtraClave123" });
+    expect(cambio.status).toBe(204);
+
+    expect((await request(app).get(`${API}/me`).set(h)).status).toBe(401);
+    const login = await request(app).post(`${API}/login`).send({ email: datos.email, password: "OtraClave123" });
+    expect(login.status).toBe(200);
+    const nuevo = await request(app).get(`${API}/me`).set({ Authorization: `Bearer ${login.body.token}` });
+    expect(nuevo.status).toBe(200);
+  });
+
+  it("un token vigente deja de dar acceso si el rol cambia a uno sin permiso", async () => {
+    await prisma.user.create({
+      data: { email: "coord@uls.edu.sv", nombre: "Coord", rol: "COORDINACION", passwordHash: bcrypt.hashSync("Coord12345", 10) },
+    });
+    const login = await request(app).post(`${API}/login`).send({ email: "coord@uls.edu.sv", password: "Coord12345" });
+    const h = { Authorization: `Bearer ${login.body.token}` };
+    expect((await request(app).get("/api/v1/usuarios").set(h)).status).not.toBe(403);
+
+    await prisma.user.update({ where: { email: "coord@uls.edu.sv" }, data: { rol: "ESTUDIANTE" } });
+    // El token aún no ha expirado, pero el rol se consulta en la base de datos
+    expect((await request(app).post("/api/v1/usuarios").set(h).send({})).status).toBe(403);
+  });
+});
+
