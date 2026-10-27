@@ -6,8 +6,9 @@ import { prisma } from "../src/lib/prisma";
 const API = "/api/v1/auth";
 const datos = {
   nombre: "Ana Prueba",
-  email: "ana.prueba@ejemplo.com",
+  email: "ana.prueba@uls.edu.sv",
   password: "Clave12345",
+  carnet: "AP-00001",
 };
 
 async function registrar() {
@@ -64,6 +65,22 @@ describe("POST /auth/register", () => {
       .send({ ...datos, password: "123" });
     expect(res.status).toBe(400);
     expect(res.body.detalles[0].campo).toBe("password");
+  });
+
+  it("exige el carnet (400)", async () => {
+    const { carnet: _sinCarnet, ...sinCarnet } = datos;
+    const res = await request(app).post(`${API}/register`).send(sinCarnet);
+    expect(res.status).toBe(400);
+    expect(res.body.detalles.map((d: { campo: string }) => d.campo)).toContain("carnet");
+  });
+
+  it("exige correo institucional (400)", async () => {
+    const res = await request(app)
+      .post(`${API}/register`)
+      .send({ ...datos, email: "ana@gmail.com" });
+    expect(res.status).toBe(400);
+    expect(res.body.detalles[0].campo).toBe("email");
+    expect(res.body.detalles[0].mensaje).toContain("@uls.edu.sv");
   });
 });
 

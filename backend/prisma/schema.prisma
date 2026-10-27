@@ -68,6 +68,7 @@ model Proyecto {
   urlDocumentacion String?
   tecnologias      String[]         @default([])
   estadoValidacion EstadoValidacion @default(PENDIENTE)
+  publicado        Boolean          @default(false)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

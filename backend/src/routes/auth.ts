@@ -7,6 +7,7 @@ import { config } from "../config";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { verifyGoogleToken } from "../lib/google";
 import { carnetSchema, validationError } from "../lib/validation";
+import { correoInstitucionalSchema, esCorreoInstitucional } from "../lib/institucional";
 
 export const authRouter = Router();
 
@@ -14,9 +15,9 @@ const userSelect = { id: true, email: true, nombre: true, rol: true } as const;
 
 const registerSchema = z.object({
   nombre: z.string().trim().min(2, "El nombre es muy corto").max(100),
-  email: z.string().trim().toLowerCase().email("Correo inválido"),
+  email: correoInstitucionalSchema,
   password: z.string().min(8, "Mínimo 8 caracteres").max(72, "Máximo 72 caracteres"),
-  carnet: carnetSchema.optional(), // opcional para COORDINACION y EMPRESA
+  carnet: carnetSchema, // obligatorio: el registro público es solo para estudiantes
 });
 
 const loginSchema = z.object({
@@ -24,7 +25,11 @@ const loginSchema = z.object({
   password: z.string().min(1, "La contraseña es obligatoria"),
 });
 
-const googleSchema = z.object({ idToken: z.string().min(20) });
+// El carnet solo se pide para crear una cuenta nueva; las cuentas existentes se vinculan sin él
+const googleSchema = z.object({
+  idToken: z.string().min(20),
+  carnet: carnetSchema.optional(),
+});
 
 const passwordSchema = z
   .object({
@@ -55,10 +60,10 @@ function signToken(user: { id: number; rol: string }) {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [nombre, email, password]
+ *             required: [nombre, email, password, carnet]
  *             properties:
  *               nombre: { type: string, example: Ana López }
- *               email: { type: string, format: email, example: ana@ejemplo.com }
+ *               email: { type: string, format: email, description: Debe ser correo institucional, example: ana@uls.edu.sv }
  *               password: { type: string, minLength: 8, example: Clave12345 }
  *               carnet: { type: string, example: AB2453 }
  *     responses:
@@ -89,16 +94,14 @@ authRouter.post("/register", async (req, res) => {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ error: "El correo ya está registrado" });
 
-  if (carnet) {
   const carnetUsado = await prisma.perfilEstudiante.findUnique({ where: { carnet } });
   if (carnetUsado) return res.status(409).json({ error: "El carnet ya está registrado" });
-}
 
-const passwordHash = await bcrypt.hash(password, 10);
-const user = await prisma.user.create({
-  data: { nombre, email, passwordHash, ...(carnet ? { perfil: { create: { carnet } } } : {}) },
-  select: userSelect,
- });
+  const passwordHash = await bcrypt.hash(password, 10);
+  const user = await prisma.user.create({
+    data: { nombre, email, passwordHash, perfil: { create: { carnet } } },
+    select: userSelect,
+  });
 
   res.status(201).json({ user, token: signToken(user) });
 });
@@ -160,7 +163,9 @@ authRouter.post("/login", async (req, res) => {
  *     summary: Iniciar sesión (o registrarse) con Google
  *     description: >
  *       Recibe el ID token que entrega Google Identity Services al frontend.
- *       Si el correo ya existe, se vincula a la misma cuenta; si no, se crea un ESTUDIANTE.
+ *       Si el correo ya existe, se vincula a la misma cuenta. Si no existe, se crea un ESTUDIANTE
+ *       y es obligatorio un correo institucional de Google Workspace y el carnet
+ *       (si falta, responde 400 con code CARNET_REQUERIDO; reenvía la petición con `carnet`).
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -171,6 +176,7 @@ authRouter.post("/login", async (req, res) => {
  *             required: [idToken]
  *             properties:
  *               idToken: { type: string }
+ *               carnet: { type: string, example: AB2453, description: Obligatorio solo para cuentas nuevas }
  *     responses:
  *       200:
  *         description: Sesión iniciada con una cuenta existente
@@ -192,6 +198,18 @@ authRouter.post("/login", async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  *       401:
  *         description: Token de Google inválido o correo no verificado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Cuenta nueva sin correo institucional (code CORREO_NO_INSTITUCIONAL)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: El carnet ya está registrado por otro estudiante
  *         content:
  *           application/json:
  *             schema:
@@ -233,8 +251,30 @@ authRouter.post("/google", async (req, res) => {
         data: { googleId: identity.sub },
       });
     } else {
+      // Cuenta nueva de estudiante: debe ser una cuenta institucional de Google Workspace
+      if (!esCorreoInstitucional(identity.email) || identity.hd !== config.dominioInstitucional) {
+        return res.status(403).json({
+          error: `Inicia sesión con tu correo institucional (@${config.dominioInstitucional})`,
+          code: "CORREO_NO_INSTITUCIONAL",
+        });
+      }
+      const { carnet } = parsed.data;
+      if (!carnet) {
+        return res.status(400).json({
+          error: "Registra tu carnet para crear tu cuenta",
+          code: "CARNET_REQUERIDO",
+        });
+      }
+      const carnetUsado = await prisma.perfilEstudiante.findUnique({ where: { carnet } });
+      if (carnetUsado) return res.status(409).json({ error: "El carnet ya está registrado" });
+
       found = await prisma.user.create({
-        data: { email: identity.email, nombre: identity.nombre, googleId: identity.sub },
+        data: {
+          email: identity.email,
+          nombre: identity.nombre,
+          googleId: identity.sub,
+          perfil: { create: { carnet } },
+        },
       });
       created = true;
     }

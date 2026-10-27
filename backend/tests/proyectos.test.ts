@@ -1,21 +1,28 @@
 import { describe, it, expect, beforeEach, afterAll } from "@jest/globals";
 import request from "supertest";
 import { app } from "../src/app";
+import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 
 // Cada estudiante necesita un carnet único
 let contador = 0;
 const carnetNuevo = () => `PR-${String(++contador).padStart(5, "0")}`;
 
-async function registrar(email: string, conCarnet = true) {
+async function registrar(email: string) {
   await request(app)
     .post("/api/v1/auth/register")
-    .send({
-      email,
-      password: "Clave12345",
-      nombre: "Test",
-      ...(conCarnet ? { carnet: carnetNuevo() } : {}),
-    });
+    .send({ email, password: "Clave12345", nombre: "Test", carnet: carnetNuevo() });
+  const r = await request(app)
+    .post("/api/v1/auth/login")
+    .send({ email, password: "Clave12345" });
+  return r.body.token as string;
+}
+
+// Cuentas anteriores a la regla de carnet obligatorio: se crean directamente en la BD
+async function registrarSinCarnet(email: string) {
+  await prisma.user.create({
+    data: { email, nombre: "Test", passwordHash: bcrypt.hashSync("Clave12345", 10) },
+  });
   const r = await request(app)
     .post("/api/v1/auth/login")
     .send({ email, password: "Clave12345" });
@@ -33,7 +40,7 @@ let token: string;
 
 beforeEach(async () => {
   await prisma.user.deleteMany(); // cascada: perfil y proyectos
-  token = await registrar("ana@test.com");
+  token = await registrar("ana@uls.edu.sv");
 });
 
 afterAll(async () => {
@@ -55,7 +62,7 @@ describe("/api/v1/proyectos", () => {
   });
 
   it("403 CARNET_REQUERIDO sin carnet, y deja crear cuando lo registra", async () => {
-    const sinCarnet = await registrar("sin@test.com", false);
+    const sinCarnet = await registrarSinCarnet("sin@uls.edu.sv");
     const h = { Authorization: `Bearer ${sinCarnet}` };
 
     const bloqueado = await request(app).post("/api/v1/proyectos").set(h).send(valido);
@@ -73,7 +80,7 @@ describe("/api/v1/proyectos", () => {
   });
 
   it("los datos inválidos se reportan antes que el carnet faltante", async () => {
-    const sinCarnet = await registrar("sin@test.com", false);
+    const sinCarnet = await registrarSinCarnet("sin@uls.edu.sv");
     const r = await request(app)
       .post("/api/v1/proyectos")
       .set({ Authorization: `Bearer ${sinCarnet}` })
@@ -98,7 +105,7 @@ describe("/api/v1/proyectos", () => {
 
   it("lista solo mis proyectos", async () => {
     await request(app).post("/api/v1/proyectos").set(auth()).send(valido);
-    const otro = await registrar("beto@test.com");
+    const otro = await registrar("beto@uls.edu.sv");
     const r = await request(app).get("/api/v1/proyectos").set({ Authorization: `Bearer ${otro}` });
     expect(r.body).toEqual([]);
   });
@@ -124,7 +131,7 @@ describe("/api/v1/proyectos", () => {
 
   it("404 al ver, editar o borrar el proyecto de otro", async () => {
     const { body } = await request(app).post("/api/v1/proyectos").set(auth()).send(valido);
-    const otro = { Authorization: `Bearer ${await registrar("beto@test.com")}` };
+    const otro = { Authorization: `Bearer ${await registrar("beto@uls.edu.sv")}` };
     expect((await request(app).get(`/api/v1/proyectos/${body.id}`).set(otro)).status).toBe(404);
     expect((await request(app).put(`/api/v1/proyectos/${body.id}`).set(otro).send({ titulo: "Hackeado" })).status).toBe(404);
     expect((await request(app).delete(`/api/v1/proyectos/${body.id}`).set(otro)).status).toBe(404);
@@ -139,5 +146,31 @@ describe("/api/v1/proyectos", () => {
 
   it("id no numérico da 400", async () => {
     expect((await request(app).get("/api/v1/proyectos/abc").set(auth())).status).toBe(400);
+  });
+});
+
+describe("publicado en el portafolio", () => {
+  it("nace no publicado y publicarlo no devuelve el proyecto a revisión", async () => {
+    const h = { Authorization: `Bearer ${token}` };
+    const creado = await request(app).post("/api/v1/proyectos").set(h).send(valido);
+    expect(creado.body.publicado).toBe(false);
+    const id = creado.body.id as number;
+    await prisma.proyecto.update({ where: { id }, data: { estadoValidacion: "VALIDADO" } });
+
+    const publicado = await request(app).put(`/api/v1/proyectos/${id}`).set(h).send({ publicado: true });
+    expect(publicado.status).toBe(200);
+    expect(publicado.body.publicado).toBe(true);
+    expect(publicado.body.estadoValidacion).toBe("VALIDADO");
+
+    // Editar el contenido sí lo devuelve a PENDIENTE
+    const editado = await request(app).put(`/api/v1/proyectos/${id}`).set(h).send({ titulo: "Otro título" });
+    expect(editado.body.estadoValidacion).toBe("PENDIENTE");
+  });
+
+  it("rechaza un valor no booleano en publicado (400)", async () => {
+    const h = { Authorization: `Bearer ${token}` };
+    const res = await request(app).post("/api/v1/proyectos").set(h).send({ ...valido, publicado: "si" });
+    expect(res.status).toBe(400);
+    expect(res.body.detalles[0].campo).toBe("publicado");
   });
 });

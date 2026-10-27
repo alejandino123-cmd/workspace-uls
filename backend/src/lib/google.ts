@@ -8,6 +8,8 @@ export interface GoogleIdentity {
   email: string;
   emailVerified: boolean;
   nombre: string;
+  // Dominio de Google Workspace de la cuenta (claim "hd"); ausente en cuentas personales
+  hd: string | null;
 }
 
 export async function verifyGoogleToken(idToken: string): Promise<GoogleIdentity> {
@@ -20,5 +22,6 @@ export async function verifyGoogleToken(idToken: string): Promise<GoogleIdentity
     email: p.email.toLowerCase(),
     emailVerified: p.email_verified === true,
     nombre: p.name ?? p.email.split("@")[0] ?? p.email,
+    hd: p.hd?.toLowerCase() ?? null,
   };
 }
