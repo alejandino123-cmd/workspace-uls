@@ -52,7 +52,7 @@ describe("validación de proyectos por coordinación", () => {
   it("401 sin token; 403 para estudiante y para empresa", async () => {
     expect((await request(app).get(`${API}/validaciones/pendientes`)).status).toBe(401);
 
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const id = await proyecto(est.token);
     const emp = await cuenta("EMPRESA", "rrhh@empresa.com");
 
@@ -64,7 +64,7 @@ describe("validación de proyectos por coordinación", () => {
   });
 
   it("coordinación ve el portafolio completo de un estudiante y cualquier proyecto", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const coord = await coordinacion();
     const a = await proyecto(est.token, "Proyecto A");
     await proyecto(est.token, "Proyecto B");
@@ -79,7 +79,7 @@ describe("validación de proyectos por coordinación", () => {
 
     const uno = await request(app).get(`${API}/validaciones/proyectos/${a}`).set(bearer(coord.token));
     expect(uno.status).toBe(200);
-    expect(uno.body.estudiante.email).toBe("ana@gmail.com");
+    expect(uno.body.estudiante.email).toBe("ana@uls.edu.sv");
     expect(uno.body.estudiante.carnet).toBe(est.carnet);
 
     expect((await request(app).get(`${API}/validaciones/proyectos/99999`).set(bearer(coord.token))).status).toBe(404);
@@ -87,7 +87,7 @@ describe("validación de proyectos por coordinación", () => {
   });
 
   it("lista solo pendientes, con los datos y el carnet del estudiante", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const coord = await coordinacion();
     const a = await proyecto(est.token, "Proyecto A");
     await proyecto(est.token, "Proyecto B");
@@ -97,12 +97,12 @@ describe("validación de proyectos por coordinación", () => {
     expect(r.status).toBe(200);
     expect(r.body).toHaveLength(1);
     expect(r.body[0].titulo).toBe("Proyecto B");
-    expect(r.body[0].estudiante.email).toBe("ana@gmail.com");
+    expect(r.body[0].estudiante.email).toBe("ana@uls.edu.sv");
     expect(r.body[0].estudiante.carnet).toBe(est.carnet);
   });
 
   it("valida y el estudiante ve el estado y el comentario", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const coord = await coordinacion();
     const id = await proyecto(est.token);
 
@@ -119,7 +119,7 @@ describe("validación de proyectos por coordinación", () => {
   });
 
   it("rechazar exige comentario", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const coord = await coordinacion();
     const id = await proyecto(est.token);
 
@@ -138,7 +138,7 @@ describe("validación de proyectos por coordinación", () => {
   });
 
   it("409 si ya fue evaluado, 404 si no existe, 400 con datos inválidos", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const coord = await coordinacion();
     const id = await proyecto(est.token);
     const evaluar = (ruta: string | number, body: object) =>
@@ -152,7 +152,7 @@ describe("validación de proyectos por coordinación", () => {
   });
 
   it("si el estudiante edita un proyecto rechazado, vuelve a pendiente y se borra el comentario", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const coord = await coordinacion();
     const id = await proyecto(est.token);
     await request(app)
@@ -174,7 +174,7 @@ describe("validación de proyectos por coordinación", () => {
 
 describe("búsqueda y perfil de estudiantes (coordinación)", () => {
   it("403 para estudiante y empresa; 401 sin token", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const emp = await cuenta("EMPRESA", "rrhh@empresa.com");
     expect((await request(app).get(`${API}/validaciones/estudiantes`)).status).toBe(401);
     for (const t of [est.token, emp.token]) {
@@ -184,9 +184,9 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
   });
 
   it("busca por nombre, correo y carnet, y solo devuelve estudiantes", async () => {
-    const ana = await estudiante("ana@gmail.com", "Ana López");
-    await estudiante("carlos@gmail.com", "Carlos Mejía");
-    await estudiante("beltran@gmail.com", "Ana Beltrán");
+    const ana = await estudiante("ana@uls.edu.sv", "Ana López");
+    await estudiante("carlos@uls.edu.sv", "Carlos Mejía");
+    await estudiante("beltran@uls.edu.sv", "Ana Beltrán");
     const coord = await coordinacion();
     const buscar = (q: string) =>
       request(app).get(`${API}/validaciones/estudiantes`).query({ buscar: q }).set(bearer(coord.token));
@@ -197,7 +197,7 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
     expect(porNombre.body.total).toBe(2);
 
     // correo
-    expect((await buscar("carlos@gmail")).body.total).toBe(1);
+    expect((await buscar("carlos@uls.edu.sv")).body.total).toBe(1);
 
     // carnet exacto (también en minúsculas)
     const porCarnet = await buscar(ana.carnet.toLowerCase());
@@ -214,9 +214,9 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
   });
 
   it("pagina los resultados y rechaza límites inválidos", async () => {
-    await estudiante("a@gmail.com", "Ana Uno");
-    await estudiante("b@gmail.com", "Beto Dos");
-    await estudiante("c@gmail.com", "Cami Tres");
+    await estudiante("a@uls.edu.sv", "Ana Uno");
+    await estudiante("b@uls.edu.sv", "Beto Dos");
+    await estudiante("c@uls.edu.sv", "Cami Tres");
     const coord = await coordinacion();
 
     const p2 = await request(app)
@@ -235,7 +235,7 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
   });
 
   it("muestra el perfil completo con el conteo de proyectos por estado", async () => {
-    const est = await estudiante("ana@gmail.com");
+    const est = await estudiante("ana@uls.edu.sv");
     const coord = await coordinacion();
     await prisma.perfilEstudiante.update({
       where: { userId: est.id },
@@ -247,7 +247,7 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
 
     const r = await request(app).get(`${API}/validaciones/estudiantes/${est.id}`).set(bearer(coord.token));
     expect(r.status).toBe(200);
-    expect(r.body.estudiante.email).toBe("ana@gmail.com");
+    expect(r.body.estudiante.email).toBe("ana@uls.edu.sv");
     expect(r.body.perfil.carnet).toBe(est.carnet);
     expect(r.body.perfil.historialAcademico).toBe("30 materias aprobadas");
     expect(r.body.perfil.porcentajeAvance).toBe(60);
@@ -258,7 +258,7 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
   it("un estudiante sin perfil devuelve valores vacíos; 404 y 400 para ids inválidos", async () => {
     const coord = await coordinacion();
     const sinPerfil = await prisma.user.create({
-      data: { email: "nuevo@gmail.com", nombre: "Sin Perfil", googleId: "g-sin-perfil" },
+      data: { email: "nuevo@uls.edu.sv", nombre: "Sin Perfil", googleId: "g-sin-perfil" },
     });
 
     const r = await request(app).get(`${API}/validaciones/estudiantes/${sinPerfil.id}`).set(bearer(coord.token));

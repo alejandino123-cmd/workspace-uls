@@ -22,6 +22,8 @@ const camposSchema = z.object({
   urlDemo: urlSchema.nullable(),
   urlDocumentacion: urlSchema.nullable(),
   tecnologias: etiquetasSchema,
+  // Solo los proyectos VALIDADOS y publicados aparecen en el portafolio público
+  publicado: z.boolean(),
 });
 
 const createSchema = camposSchema.partial({
@@ -29,6 +31,7 @@ const createSchema = camposSchema.partial({
   urlDemo: true,
   urlDocumentacion: true,
   tecnologias: true,
+  publicado: true,
 });
 
 const updateSchema = camposSchema
@@ -46,6 +49,7 @@ const proyectoSelect = {
   urlDocumentacion: true,
   tecnologias: true,
   estadoValidacion: true,
+  publicado: true,
   createdAt: true,
   updatedAt: true,
   validacion: { select: { comentario: true, createdAt: true } },
@@ -92,6 +96,7 @@ function parseId(raw: unknown, res: Response) {
  *               urlDemo: { type: string, nullable: true }
  *               urlDocumentacion: { type: string, nullable: true }
  *               tecnologias: { type: array, items: { type: string }, example: ["Vue", "Node.js"] }
+ *               publicado: { type: boolean, default: false, description: Si aparece en el portafolio público (requiere estar VALIDADO) }
  *     responses:
  *       201:
  *         description: Proyecto creado
@@ -185,6 +190,7 @@ proyectosRouter.get("/", async (req: AuthRequest, res) => {
  *               urlDemo: { type: string, nullable: true }
  *               urlDocumentacion: { type: string, nullable: true }
  *               tecnologias: { type: array, items: { type: string } }
+ *               publicado: { type: boolean, description: Activa o desactiva la publicación en el portafolio público }
  *     responses:
  *       200:
  *         description: Proyecto actualizado
@@ -224,13 +230,21 @@ proyectosRouter.put("/:id", async (req: AuthRequest, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
 
-    // updateMany permite filtrar por dueño en la misma consulta
+  // Cambiar solo la publicación no vuelve a revisar el proyecto; editar su contenido sí
+  const reiniciarValidacion = Object.keys(parsed.data).some((campo) => campo !== "publicado");
+
+  // updateMany permite filtrar por dueño en la misma consulta
   const count = await prisma.$transaction(async (tx) => {
     const { count } = await tx.proyecto.updateMany({
       where: { id, perfil: { userId: req.user!.id } },
-      data: { ...parsed.data, estadoValidacion: "PENDIENTE" },
+      data: {
+        ...parsed.data,
+        ...(reiniciarValidacion ? { estadoValidacion: "PENDIENTE" as const } : {}),
+      },
     });
-    if (count > 0) await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
+    if (count > 0 && reiniciarValidacion) {
+      await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
+    }
     return count;
   });
   if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });

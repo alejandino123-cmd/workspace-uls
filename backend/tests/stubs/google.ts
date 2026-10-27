@@ -5,6 +5,7 @@ type GoogleIdentity = {
   email: string;
   emailVerified: boolean;
   nombre: string;
+  hd: string | null;
 };
 
 // Sustituto de src/lib/google.ts durante los tests: nunca llama a Google.

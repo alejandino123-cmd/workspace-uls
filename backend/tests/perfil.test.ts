@@ -6,8 +6,9 @@ import { prisma } from "../src/lib/prisma";
 const PERFIL = "/api/v1/perfil";
 const datos = {
   nombre: "Ana Prueba",
-  email: "ana.prueba@ejemplo.com",
+  email: "ana.prueba@uls.edu.sv",
   password: "Clave12345",
+  carnet: "PA-00001",
 };
 
 async function sesion() {
@@ -48,7 +49,7 @@ describe("GET /perfil", () => {
     const res = await request(app).get(PERFIL).set(auth(token));
     expect(res.status).toBe(200);
     expect(res.body.perfil).toMatchObject({
-      carnet: null,
+      carnet: "PA-00001",
       porcentajeAvance: 0,
       historialAcademico: null,
       disponibilidad: null,
