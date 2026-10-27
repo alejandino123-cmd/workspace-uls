@@ -16,19 +16,28 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value)
   const rol = computed(() => user.value?.rol ?? null)
 
-  async function login(email: string, password: string) {
-    const { data } = await api.post('/auth/login', { email, password })
-
-    // Ajustar cuando veamos la respuesta real
-    token.value = data.token ?? data.data?.token
-    user.value = data.user ?? data.data?.user
-
-    localStorage.setItem('token', token.value!)
-    localStorage.setItem('user', JSON.stringify(user.value))
-    
+  // Guarda la sesión en el store y en el navegador (lo usan login y register)
+  function guardarSesion(t: string, u: Usuario) {
+    token.value = t
+    user.value = u
+    localStorage.setItem('token', t)
+    localStorage.setItem('user', JSON.stringify(u))
   }
 
-  
+  async function login(email: string, password: string) {
+    const { data } = await api.post('/auth/login', { email, password })
+    guardarSesion(data.token, data.user)
+  }
+
+  async function register(nombre: string, email: string, password: string, carnet?: string) {
+    const { data } = await api.post('/auth/register', {
+      nombre,
+      email,
+      password,
+      carnet: carnet || undefined, // si viene vacío no se manda
+    })
+    guardarSesion(data.token, data.user)
+  }
 
   async function fetchUser() {
     const guardado = localStorage.getItem('user')
@@ -37,10 +46,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-async function register(nombre: string, email: string, password: string) {
-  await api.post('/auth/register', { nombre, email, password })
-  await login(email, password)
-}
   function logout() {
     token.value = null
     user.value = null

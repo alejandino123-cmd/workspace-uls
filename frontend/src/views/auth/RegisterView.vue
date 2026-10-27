@@ -83,6 +83,16 @@ async function handleRegister() {
             </div>
 
             <div class="sakai-field">
+              <label for="carnet">Carnet</label>
+              <InputText
+                id="carnet"
+                type="carnet"
+                placeholder="carnet de estudiante"
+                fluid
+              />
+            </div>
+
+            <div class="sakai-field">
               <label for="email">Correo electrónico</label>
               <InputText
                 id="email"

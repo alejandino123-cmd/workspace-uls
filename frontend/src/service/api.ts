@@ -16,7 +16,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    const esAuth = error.config?.url?.includes('/auth/login')
+    const rutasPublicas = ['/auth/login', '/auth/google', '/auth/register']
+    const esAuth = rutasPublicas.some((r) => error.config?.url?.includes(r))
     if (error.response?.status === 401 && !esAuth) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
