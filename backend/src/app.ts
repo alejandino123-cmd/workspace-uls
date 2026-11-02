@@ -11,6 +11,8 @@ import { perfilesRouter } from "./routes/perfiles";
 import { proyectosRouter } from "./routes/proyectos";
 import { validacionesRouter } from "./routes/validaciones";
 import { usuariosRouter } from "./routes/usuarios";
+import { fotosRouter } from "./routes/fotos";
+import { dosPasosRouter } from "./routes/dosPasos";
 
 const openApiSpec = swaggerJsdoc({
   definition: {
@@ -128,6 +130,8 @@ app.use("/api/v1/proyectos", proyectosRouter);
 app.use("/api/v1/usuarios", usuariosRouter);
 app.use("/api/v1/validaciones", validacionesRouter);
 app.use("/api/v1/perfiles", perfilesRouter);
+app.use("/api/v1/fotos", fotosRouter);
+app.use("/api/v1/auth/2fa", dosPasosRouter);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (

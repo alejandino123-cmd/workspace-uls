@@ -73,6 +73,7 @@ perfilesRouter.get("/", async (req, res) => {
       select: {
         id: true,
         nombre: true,
+        fotoArchivo: true,
         perfil: {
           select: {
             porcentajeAvance: true,
@@ -90,7 +91,9 @@ perfilesRouter.get("/", async (req, res) => {
     page,
     limit,
     estudiantes: filas.map(({ perfil, ...u }) => ({
-      ...u,
+      id: u.id,
+      nombre: u.nombre,
+      fotoUrl: u.fotoArchivo ? `/api/v1/fotos/${u.id}` : null,
       porcentajeAvance: perfil?.porcentajeAvance ?? 0,
       disponibilidad: perfil?.disponibilidad ?? null,
       habilidades: perfil?.habilidades ?? [],
@@ -149,6 +152,7 @@ perfilesRouter.get("/:userId", async (req, res) => {
     select: {
       id: true,
       nombre: true,
+      fotoArchivo: true,
       perfil: {
         select: {
           porcentajeAvance: true,
@@ -178,7 +182,11 @@ perfilesRouter.get("/:userId", async (req, res) => {
 
   const perfil = user.perfil;
   res.json({
-    estudiante: { id: user.id, nombre: user.nombre },
+    estudiante: {
+      id: user.id,
+      nombre: user.nombre,
+      fotoUrl: user.fotoArchivo ? `/api/v1/fotos/${user.id}` : null,
+    },
     perfil: {
       porcentajeAvance: perfil?.porcentajeAvance ?? 0,
       disponibilidad: perfil?.disponibilidad ?? null,

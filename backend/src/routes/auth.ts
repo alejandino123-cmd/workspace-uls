@@ -1,13 +1,12 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import jwt, { SignOptions } from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { config } from "../config";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { carnetSchema, validationError } from "../lib/validation";
 import { correoInstitucionalSchema, esCorreoInstitucional } from "../lib/institucional";
 import { limitarPorCorreo, limitarPorUsuario } from "../lib/rate-limit";
+import { signToken, signTokenTemporal } from "../lib/tokens";
 
 export const authRouter = Router();
 
@@ -38,13 +37,6 @@ const passwordSchema = z
 // Hash de referencia: se compara siempre para que el tiempo de respuesta no revele si el correo existe
 const HASH_FICTICIO = bcrypt.hashSync("contraseña-ficticia-sin-uso", 10);
 
-// "ver" permite invalidar el token al cambiar la contraseña (ver requireAuth)
-function signToken(user: { id: number; rol: string; tokenVersion: number }) {
-  return jwt.sign({ rol: user.rol, ver: user.tokenVersion }, config.jwtSecret, {
-    subject: String(user.id),
-    expiresIn: config.jwtExpiresIn as SignOptions["expiresIn"],
-  });
-}
 
 /**
  * @openapi
@@ -123,7 +115,7 @@ authRouter.post("/register", limitarPorCorreo, async (req, res) => {
  *               password: { type: string, example: Clave12345 }
  *     responses:
  *       200:
- *         description: Sesión iniciada
+ *         description: Sesión iniciada, o requiere segundo paso (requiere2fa y tokenTemporal) si la cuenta tiene 2FA
  *         content:
  *           application/json:
  *             schema:
@@ -152,6 +144,11 @@ authRouter.post("/login", limitarPorCorreo, async (req, res) => {
   const valida = await bcrypt.compare(password, found?.passwordHash ?? HASH_FICTICIO);
   if (!found || !found.passwordHash || !valida) {
     return res.status(401).json({ error: "Credenciales inválidas" });
+  }
+
+  // Con autenticación en dos pasos, aún no se entrega el token de acceso
+  if (found.totpActivo) {
+    return res.json({ requiere2fa: true, tokenTemporal: signTokenTemporal(found) });
   }
 
   const user = { id: found.id, email: found.email, nombre: found.nombre, rol: found.rol };

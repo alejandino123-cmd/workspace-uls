@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Request } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { config } from "../config";
@@ -27,4 +28,10 @@ export const limitarPorCorreo = crearLimitador(claveCorreo);
 export const limitarPorUsuario = crearLimitador((req) => {
   const usuario = (req as Request & { user?: { id: number } }).user?.id ?? "anonimo";
   return `usuario:${usuario}|${ipKeyGenerator(req.ip ?? "")}`;
+});
+
+// Código de 2FA: los intentos se cuentan por token temporal, así que cada inicio de sesión tiene su propio límite
+export const limitarPorTokenTemporal = crearLimitador((req) => {
+  const token = String(req.body?.tokenTemporal ?? "");
+  return `2fa|${createHash("sha256").update(token).digest("hex")}`;
 });

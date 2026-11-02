@@ -62,7 +62,7 @@ describe("GET /api/v1/perfiles/:userId (público)", () => {
 
     const r = await request(app).get(`/api/v1/perfiles/${est.id}`);
     expect(r.status).toBe(200);
-    expect(r.body.estudiante).toEqual({ id: est.id, nombre: "Ana López" });
+    expect(r.body.estudiante).toEqual({ id: est.id, nombre: "Ana López", fotoUrl: null });
     expect(r.body.perfil.habilidades).toEqual(["Vue.js", "Node.js"]);
     expect(r.body.perfil.porcentajeAvance).toBe(70);
     expect(r.body.perfil.carnet).toBeUndefined();

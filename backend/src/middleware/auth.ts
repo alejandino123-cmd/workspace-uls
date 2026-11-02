@@ -22,8 +22,9 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
     return res.status(401).json({ error: "Token inválido o expirado" });
   }
 
+  // Los tokens de paso intermedio (2FA) no dan acceso a la API
   const id = Number(payload.sub);
-  if (!Number.isInteger(id)) return res.status(401).json({ error: "Token inválido o expirado" });
+  if (payload.paso || !Number.isInteger(id)) return res.status(401).json({ error: "Token inválido o expirado" });
 
   const usuario = await prisma.user.findUnique({
     where: { id },
