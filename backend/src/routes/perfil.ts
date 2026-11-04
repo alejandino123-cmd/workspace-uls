@@ -17,6 +17,7 @@ const perfilSelect = {
   historialAcademico: true,
   disponibilidad: true,
   habilidades: true,
+  fotoUrl: true,
 } as const;
 
 const updateSchema = z
@@ -32,8 +33,7 @@ const updateSchema = z
   })
   .refine((datos) => Object.keys(datos).length > 0, {
     message: "Envía al menos un campo para actualizar",
-  });
-
+  }); 
 /**
  * @openapi
  * /api/v1/perfil:

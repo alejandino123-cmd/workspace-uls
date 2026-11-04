@@ -53,6 +53,8 @@ model PerfilEstudiante {
   historialAcademico String?
   disponibilidad     Disponibilidad?
   habilidades        String[]        @default([])
+  fotoUrl      String?
+  fotoPublicId String?
 
   proyectos Proyecto[]
 }
