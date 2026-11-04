@@ -1,0 +1,51 @@
+import { api } from './api'
+
+export type EstadoValidacion = 'PENDIENTE' | 'VALIDADO' | 'RECHAZADO'
+
+// Lo que devuelve GET /proyectos (mis proyectos)
+export interface Proyecto {
+  id: number
+  titulo: string
+  descripcion: string
+  urlRepositorio: string | null
+  urlDemo: string | null
+  urlDocumentacion: string | null
+  tecnologias: string[]
+  estadoValidacion: EstadoValidacion
+  publicado: boolean
+  createdAt: string
+  updatedAt: string
+  validacion: { comentario: string | null; createdAt: string } | null
+}
+
+// Lo que se envía al crear o editar. Las URLs vacías deben ir como null:
+// el backend rechaza "" porque no es una URL válida.
+export interface ProyectoInput {
+  titulo: string
+  descripcion: string
+  urlRepositorio: string | null
+  urlDemo: string | null
+  urlDocumentacion: string | null
+  tecnologias: string[]
+}
+
+export async function listarMisProyectos() {
+  const { data } = await api.get<Proyecto[]>('/proyectos')
+  return data
+}
+
+export async function crearProyecto(datos: ProyectoInput) {
+  const { data } = await api.post<Proyecto>('/proyectos', datos)
+  return data
+}
+
+// Editar el contenido devuelve el proyecto a PENDIENTE y borra su validación.
+// Cambiar solo `publicado` no reinicia la revisión.
+export async function actualizarProyecto(id: number, datos: Partial<ProyectoInput> & { publicado?: boolean }) {
+  const { data } = await api.put<Proyecto>(`/proyectos/${id}`, datos)
+  return data
+}
+
+export async function eliminarProyecto(id: number) {
+  await api.delete(`/proyectos/${id}`)
+}

@@ -13,6 +13,10 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token'))
   const user = ref<Usuario | null>(null)
 
+  // URL de la foto de perfil (solo estudiantes). La comparten la barra superior y
+  // la página Mi perfil: si una la cambia, la otra se entera sola.
+  const fotoUrl = ref<string | null>(null)
+
   const isAuthenticated = computed(() => !!token.value)
   const rol = computed(() => user.value?.rol ?? null)
 
@@ -49,9 +53,10 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     token.value = null
     user.value = null
+    fotoUrl.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   }
 
-  return { token, user, isAuthenticated, rol, login, fetchUser, register, logout }
+  return { token, user, fotoUrl, isAuthenticated, rol, login, fetchUser, register, logout }
 })

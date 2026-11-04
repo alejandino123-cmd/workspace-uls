@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+/* Tema claro global de Workspace ULS.
+   El fondo (slate-100) y el texto (slate-800) se definen aquí una sola vez;
+   las vistas no deberían repetirlos. */
+:root {
+  color-scheme: light;
+}
+
+/* Reset básico + fondo global.
+   Evita el "borde" del navegador cuando el contenido no llena el 100% del alto. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background-color: #f1f5f9; /* slate-100 */
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body {
+  color: #1e293b; /* slate-800 */
+  font-family: inherit;
+}
