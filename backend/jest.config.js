@@ -2,8 +2,10 @@
 module.exports = {
   testEnvironment: "node",
   testMatch: ["<rootDir>/tests/**/*.test.ts"],
+  // otplib y sus dependencias son ESM: hay que transpilarlas para que Jest (CommonJS) las cargue
+  transformIgnorePatterns: ["/node_modules/(?!(otplib|@otplib|@scure|@noble)/)"],
   transform: {
-    "^.+\\.ts$": [
+    "^.+\\.(t|j)s$": [
       "@swc/jest",
       {
         jsc: { parser: { syntax: "typescript" }, target: "es2022" },
@@ -13,7 +15,6 @@ module.exports = {
   },
   moduleNameMapper: {
     "^@scalar/express-api-reference$": "<rootDir>/tests/stubs/scalar.ts",
-    "(.*)/lib/google$": "<rootDir>/tests/stubs/google.ts",
   },
   globalSetup: "<rootDir>/tests/global-setup.ts",
   setupFiles: ["<rootDir>/tests/setup-env.ts"],

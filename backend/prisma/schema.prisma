@@ -34,7 +34,12 @@ model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
   passwordHash String?
-  googleId     String?   @unique
+  tokenVersion Int    @default(0) // sube al cambiar la contraseña: invalida sesiones anteriores
+  fotoArchivo  String?  // nombre del archivo en la carpeta de subidas
+  fotoTipo     String?  // tipo MIME de la foto (image/jpeg, image/png o image/webp)
+  totpActivo        Boolean  @default(false) // autenticación en dos pasos activa
+  totpSecretoCifrado String? // secreto TOTP cifrado (AES-256-GCM)
+  codigosRespaldo   String[] @default([]) // hashes SHA-256 de los códigos de respaldo sin usar
   nombre       String
   rol          Rol      @default(ESTUDIANTE)
   createdAt    DateTime @default(now())

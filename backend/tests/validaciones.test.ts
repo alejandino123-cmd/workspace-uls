@@ -258,7 +258,7 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
   it("un estudiante sin perfil devuelve valores vacíos; 404 y 400 para ids inválidos", async () => {
     const coord = await coordinacion();
     const sinPerfil = await prisma.user.create({
-      data: { email: "nuevo@uls.edu.sv", nombre: "Sin Perfil", googleId: "g-sin-perfil" },
+      data: { email: "nuevo@uls.edu.sv", nombre: "Sin Perfil" },
     });
 
     const r = await request(app).get(`${API}/validaciones/estudiantes/${sinPerfil.id}`).set(bearer(coord.token));
