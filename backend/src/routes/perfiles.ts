@@ -73,9 +73,10 @@ perfilesRouter.get("/", async (req, res) => {
       select: {
         id: true,
         nombre: true,
-        fotoArchivo: true,
         perfil: {
+          
           select: {
+            fotoUrl:true,
             porcentajeAvance: true,
             disponibilidad: true,
             habilidades: true,
@@ -93,7 +94,7 @@ perfilesRouter.get("/", async (req, res) => {
     estudiantes: filas.map(({ perfil, ...u }) => ({
       id: u.id,
       nombre: u.nombre,
-      fotoUrl: u.fotoArchivo ? `/api/v1/fotos/${u.id}` : null,
+      fotoUrl: perfil?.fotoUrl ?? null,
       porcentajeAvance: perfil?.porcentajeAvance ?? 0,
       disponibilidad: perfil?.disponibilidad ?? null,
       habilidades: perfil?.habilidades ?? [],
@@ -152,9 +153,9 @@ perfilesRouter.get("/:userId", async (req, res) => {
     select: {
       id: true,
       nombre: true,
-      fotoArchivo: true,
       perfil: {
         select: {
+          fotoUrl:true,
           porcentajeAvance: true,
           disponibilidad: true,
           habilidades: true,
@@ -180,18 +181,16 @@ perfilesRouter.get("/:userId", async (req, res) => {
   });
   if (!user) return res.status(404).json({ error: "Estudiante no encontrado" });
 
-  const perfil = user.perfil;
-  res.json({
-    estudiante: {
-      id: user.id,
-      nombre: user.nombre,
-      fotoUrl: user.fotoArchivo ? `/api/v1/fotos/${user.id}` : null,
-    },
-    perfil: {
-      porcentajeAvance: perfil?.porcentajeAvance ?? 0,
-      disponibilidad: perfil?.disponibilidad ?? null,
-      habilidades: perfil?.habilidades ?? [],
-    },
-    proyectos: perfil?.proyectos ?? [],
-  });
+const perfil = user.perfil;
+const fotoUrl = perfil?.fotoUrl ?? null;
+res.json({
+  estudiante: { id: user.id, nombre: user.nombre, fotoUrl },
+  perfil: {
+    porcentajeAvance: perfil?.porcentajeAvance ?? 0,
+    disponibilidad: perfil?.disponibilidad ?? null,
+    habilidades: perfil?.habilidades ?? [],
+    fotoUrl,
+  },
+  proyectos: perfil?.proyectos ?? [],
+}); 
 });
