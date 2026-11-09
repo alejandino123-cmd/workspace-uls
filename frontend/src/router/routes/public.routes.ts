@@ -1,4 +1,4 @@
-// src/router/public.routes.ts
+// src/router/routes/public.routes.ts
 import type { RouteRecordRaw } from 'vue-router'
 
 export const publicRoutes: Array<RouteRecordRaw> = [

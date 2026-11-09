@@ -1,4 +1,4 @@
-// src/router/private.routes.ts
+// src/router/routes/private.routes.ts
 import type { RouteRecordRaw } from 'vue-router'
 
 // Zona privada: exige sesión (requiresAuth) y limita cada pantalla por rol (roles).

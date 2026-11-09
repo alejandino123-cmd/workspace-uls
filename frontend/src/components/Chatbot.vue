@@ -69,7 +69,8 @@ const toggle = () => {
         <header class="chatbot__header">
           <div>
             <p class="chatbot__title">Asistente Workspace</p>
-            <p class="chatbot__subtitle">Busca talento en el directorio</p>
+            <p class="chatbot__subtitle">Busca talento en el direct
+            orio</p>
           </div>
           <Button
             icon="pi pi-times"
