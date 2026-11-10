@@ -27,6 +27,18 @@ export const privateRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/views/admin/AdminDashboard.vue'),
         meta: { roles: ['COORDINACION'] },
       },
+      {
+        path: 'admin/estudiantes',
+        name: 'admin-estudiantes',
+        component: () => import('@/views/admin/EstudiantesView.vue'),
+        meta: { roles: ['COORDINACION'] },
+      },
+      {
+        path: 'admin/estudiantes/:id',
+        name: 'admin-estudiante-detalle',
+        component: () => import('@/views/admin/EstudianteDetalleView.vue'),
+        meta: { roles: ['COORDINACION'] },
+      },
     ],
   },
 ]

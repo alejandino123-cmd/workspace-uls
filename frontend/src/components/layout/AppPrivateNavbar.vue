@@ -37,7 +37,13 @@ const items = computed<MenuItem[]>(() => {
         label: 'Validaciones',
         icon: 'pi pi-check-square',
         command: () => router.push('/admin'),
-        class: activa('/admin'),
+        class: route.path === '/admin' ? 'is-active' : '',
+      },
+      {
+        label: 'Estudiantes',
+        icon: 'pi pi-users',
+        command: () => router.push('/admin/estudiantes'),
+        class: activa('/admin/estudiantes'),
       },
     ]
   }

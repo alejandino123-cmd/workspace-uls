@@ -187,7 +187,7 @@ validacionesRouter.get("/estudiantes", async (req, res) => {
         id: true,
         nombre: true,
         email: true,
-        perfil: { select: { carnet: true, porcentajeAvance: true } },
+        perfil: { select: { carnet: true, fotoUrl: true, porcentajeAvance: true } },
       },
     }),
   ]);
@@ -199,6 +199,7 @@ validacionesRouter.get("/estudiantes", async (req, res) => {
     estudiantes: filas.map(({ perfil, ...u }) => ({
       ...u,
       carnet: perfil?.carnet ?? null,
+      fotoUrl: perfil?.fotoUrl ?? null,
       porcentajeAvance: perfil?.porcentajeAvance ?? 0,
     })),
   });
@@ -265,6 +266,7 @@ validacionesRouter.get("/estudiantes/:userId", async (req, res) => {
       perfil: {
         select: {
           carnet: true,
+          fotoUrl: true,
           porcentajeAvance: true,
           historialAcademico: true,
           disponibilidad: true,
@@ -288,6 +290,7 @@ validacionesRouter.get("/estudiantes/:userId", async (req, res) => {
     estudiante,
     perfil: perfil ?? {
       carnet: null,
+      fotoUrl: null,
       porcentajeAvance: 0,
       historialAcademico: null,
       disponibilidad: null,

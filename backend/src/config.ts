@@ -1,5 +1,4 @@
 import "dotenv/config";
-import path from "node:path";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -14,9 +13,6 @@ export const config = {
   cifradoKey: required("CIFRADO_KEY"),
   // Intentos fallidos permitidos cada 15 minutos por correo+IP (y por usuario al cambiar contraseña)
   loginMaxIntentos: Number(process.env.LOGIN_MAX_INTENTOS ?? 3),
-  // Carpeta donde se guardan las imágenes subidas (fotos de perfil)
-  uploadsDir: path.resolve(process.env.UPLOADS_DIR ?? "uploads"),
-  fotoMaxBytes: 2 * 1024 * 1024,
   // Dominio del correo institucional; los estudiantes solo pueden registrarse con él
   dominioInstitucional: (process.env.DOMINIO_INSTITUCIONAL ?? "uls.edu.sv").trim().toLowerCase(),
   // Fotos de perfil. Opcionales: sin ellas, PUT /perfil/foto responde 503

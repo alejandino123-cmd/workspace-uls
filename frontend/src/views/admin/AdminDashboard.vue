@@ -146,7 +146,9 @@ onMounted(cargar)
 
         <Column header="Estudiante">
           <template #body="{ data }">
-            <div class="proy-titulo">{{ data.estudiante.nombre }}</div>
+            <div class="proy-titulo">
+              <RouterLink :to="'/admin/estudiantes/' + data.estudiante.id">{{ data.estudiante.nombre }}</RouterLink>
+            </div>
             <div class="proy-meta">Carnet: {{ data.estudiante.carnet ?? 'sin registrar' }}</div>
             <div class="proy-meta">{{ data.estudiante.email }}</div>
           </template>
@@ -179,7 +181,9 @@ onMounted(cargar)
 
         <Column header="Estudiante">
           <template #body="{ data }">
-            <div class="proy-titulo">{{ data.estudiante.nombre }}</div>
+            <div class="proy-titulo">
+              <RouterLink :to="'/admin/estudiantes/' + data.estudiante.id">{{ data.estudiante.nombre }}</RouterLink>
+            </div>
             <div class="proy-meta">Carnet: {{ data.estudiante.carnet ?? 'sin registrar' }}</div>
           </template>
         </Column>
