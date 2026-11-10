@@ -18,6 +18,14 @@ export async function listarPendientes() {
   return data
 }
 
+// Mismo formato que los pendientes; `validacion` trae la fecha y el comentario de la revisión
+export type ProyectoValidado = ProyectoPendiente
+
+export async function listarValidados() {
+  const { data } = await api.get<ProyectoValidado[]>('/validaciones/validados')
+  return data
+}
+
 export interface EvaluacionInput {
   estado: 'VALIDADO' | 'RECHAZADO'
   comentario?: string // obligatorio al rechazar

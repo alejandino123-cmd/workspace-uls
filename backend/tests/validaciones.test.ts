@@ -272,3 +272,32 @@ describe("búsqueda y perfil de estudiantes (coordinación)", () => {
     expect((await request(app).get(`${API}/validaciones/estudiantes/abc`).set(bearer(coord.token))).status).toBe(400);
   });
 });
+describe("GET /validaciones/validados", () => {
+  it("lista solo proyectos validados, con los datos del estudiante y de la validación", async () => {
+    const coord = await coordinacion();
+    const ana = await estudiante("ana@uls.edu.sv", "Ana López");
+    const beto = await estudiante("beto@uls.edu.sv", "Beto Mejía");
+    const validado = await proyecto(ana.token, "Proyecto validado");
+    await proyecto(beto.token, "Proyecto pendiente");
+    await request(app)
+      .post(`${API}/validaciones/${validado}`)
+      .set(bearer(coord.token))
+      .send({ estado: "VALIDADO", comentario: "Bien hecho" });
+
+    const r = await request(app).get(`${API}/validaciones/validados`).set(bearer(coord.token));
+    expect(r.status).toBe(200);
+    expect(r.body).toHaveLength(1);
+    expect(r.body[0]).toMatchObject({
+      titulo: "Proyecto validado",
+      estadoValidacion: "VALIDADO",
+      validacion: { comentario: "Bien hecho" },
+      estudiante: { id: ana.id, nombre: "Ana López", email: "ana@uls.edu.sv", carnet: ana.carnet },
+    });
+  });
+
+  it("403 para estudiante y 401 sin sesión", async () => {
+    const ana = await estudiante("ana@uls.edu.sv");
+    expect((await request(app).get(`${API}/validaciones/validados`).set(bearer(ana.token))).status).toBe(403);
+    expect((await request(app).get(`${API}/validaciones/validados`)).status).toBe(401);
+  });
+});

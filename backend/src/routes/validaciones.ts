@@ -93,6 +93,34 @@ validacionesRouter.get("/pendientes", async (_req, res) => {
 
 /**
  * @openapi
+ * /api/v1/validaciones/validados:
+ *   get:
+ *     tags: [Validaciones]
+ *     summary: Proyectos ya validados, con los datos de su estudiante
+ *     description: Solo COORDINACION. Del más reciente al más antiguo según su validación.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Lista de proyectos VALIDADOS con los datos del autor y la validación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/Proyecto' }
+ *       401: { $ref: '#/components/responses/NoAutenticado' }
+ *       403: { $ref: '#/components/responses/SinPermiso' }
+ */
+validacionesRouter.get("/validados", async (_req, res) => {
+  const proyectos = await prisma.proyecto.findMany({
+    where: { estadoValidacion: "VALIDADO" },
+    orderBy: { updatedAt: "desc" },
+    select: { ...proyectoSelect, perfil: { select: autorSelect } },
+  });
+  res.json(proyectos.map(({ perfil, ...p }) => ({ ...p, estudiante: armarAutor(perfil) })));
+});
+
+/**
+ * @openapi
  * /api/v1/validaciones/estudiantes:
  *   get:
  *     tags: [Validaciones]
