@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import Menubar from 'primevue/menubar'
+import { useRouter } from 'vue-router'
 import Menu from 'primevue/menu'
 import Button from 'primevue/button'
 import type { MenuItem } from 'primevue/menuitem'
 import { useAuthStore } from '@/stores/auth'
-import LogoWorkspace from '@/components/layout/LogoWorkspace.vue'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
 import { obtenerPerfil } from '@/service/perfil'
 
+// Barra superior de la zona privada: botón para abrir el menú lateral (móvil) y menú del usuario.
+const emit = defineEmits<{ (e: 'menu'): void }>()
+
 const router = useRouter()
-const route = useRoute()
 const authStore = useAuthStore()
 
 const nombre = computed(() => authStore.user?.nombre ?? '')
@@ -25,47 +25,6 @@ onMounted(async () => {
   } catch {
     // Si falla, simplemente se muestra la inicial del nombre
   }
-})
-
-// Navegación principal según el rol. La clase `is-active` marca la sección actual.
-const items = computed<MenuItem[]>(() => {
-  const activa = (ruta: string) => (route.path.startsWith(ruta) ? 'is-active' : '')
-
-  if (authStore.rol === 'COORDINACION') {
-    return [
-      {
-        label: 'Validaciones',
-        icon: 'pi pi-check-square',
-        command: () => router.push('/admin'),
-        class: route.path === '/admin' ? 'is-active' : '',
-      },
-      {
-        label: 'Estudiantes',
-        icon: 'pi pi-users',
-        command: () => router.push('/admin/estudiantes'),
-        class: activa('/admin/estudiantes'),
-      },
-    ]
-  }
-
-  if (authStore.rol === 'ESTUDIANTE') {
-    return [
-      {
-        label: 'Mis proyectos',
-        icon: 'pi pi-folder',
-        command: () => router.push('/mis-proyectos'),
-        class: activa('/mis-proyectos'),
-      },
-      {
-        label: 'Mi perfil',
-        icon: 'pi pi-user',
-        command: () => router.push('/perfil'),
-        class: activa('/perfil'),
-      },
-    ]
-  }
-
-  return [] // EMPRESA: todavía sin secciones propias
 })
 
 // Menú desplegable del usuario
@@ -91,68 +50,49 @@ function toggleMenu(event: Event) {
 </script>
 
 <template>
-  <Menubar :model="items" class="navbar">
-    <template #start>
-      <RouterLink to="/" class="brand" aria-label="Workspace ULS, ir al inicio">
-        <LogoWorkspace size="2.6rem" />
-        <span class="brand-title">Workspace ULS</span>
-      </RouterLink>
-    </template>
+  <header class="barra">
+    <Button
+      type="button"
+      text
+      severity="secondary"
+      icon="pi pi-bars"
+      class="boton-menu"
+      aria-label="Abrir el menú"
+      @click="emit('menu')"
+    />
 
-    <template #end>
-      <Button
-        type="button"
-        text
-        severity="secondary"
-        class="user-button"
-        aria-haspopup="true"
-        aria-controls="menu_usuario"
-        @click="toggleMenu"
-      >
-        <AvatarEstudiante :nombre="nombre" :foto-url="authStore.fotoUrl" tamano="34px" />
-        <span class="user-name">{{ nombre }}</span>
-        <i class="pi pi-chevron-down user-chevron"></i>
-      </Button>
-      <Menu id="menu_usuario" ref="menu" :model="userItems" :popup="true" />
-    </template>
-  </Menubar>
+    <Button
+      type="button"
+      text
+      severity="secondary"
+      class="user-button"
+      aria-haspopup="true"
+      aria-controls="menu_usuario"
+      @click="toggleMenu"
+    >
+      <AvatarEstudiante :nombre="nombre" :foto-url="authStore.fotoUrl" tamano="34px" />
+      <span class="user-name">{{ nombre }}</span>
+      <i class="pi pi-chevron-down user-chevron"></i>
+    </Button>
+    <Menu id="menu_usuario" ref="menu" :model="userItems" :popup="true" />
+  </header>
 </template>
 
 <style scoped>
-.navbar {
-  border-radius: 0;
-  border: none;
-  border-bottom: 1px solid var(--p-content-border-color);
-  padding: 1rem 2rem;
-}
-
-.brand {
-  display: inline-flex;
+.barra {
+  display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.75rem;
-  margin-right: 2rem;
-  text-decoration: none;
+  padding: 0.85rem 2rem;
+  background: color-mix(in srgb, var(--ws-fondo) 85%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--ws-borde);
 }
 
-.brand-title {
-  color: var(--p-text-color);
-  font-weight: 700;
-  font-size: 1.3rem;
-}
-
-.navbar :deep(.p-menubar-item-label) {
-  font-size: 1.05rem;
-}
-
-.navbar :deep(.p-menubar-item-icon) {
-  font-size: 1.1rem;
-}
-
-/* Sección actual */
-.navbar :deep(.is-active .p-menubar-item-label),
-.navbar :deep(.is-active .p-menubar-item-icon) {
-  color: var(--p-primary-color);
-  font-weight: 600;
+.boton-menu {
+  display: none;
+  margin-right: auto;
 }
 
 /* Botón de usuario */
@@ -165,25 +105,21 @@ function toggleMenu(event: Event) {
 
 .user-name {
   font-weight: 600;
-  color: var(--p-text-color);
+  color: var(--ws-texto);
 }
 
 .user-chevron {
   font-size: 0.75rem;
-  color: var(--p-text-muted-color);
+  color: var(--ws-texto-suave);
 }
 
 @media (max-width: 960px) {
-  .navbar {
-    padding: 0.75rem 1rem;
+  .barra {
+    padding: 0.7rem 1rem;
   }
 
-  .brand {
-    margin-right: 1rem;
-  }
-
-  .brand-title {
-    font-size: 1.15rem;
+  .boton-menu {
+    display: inline-flex;
   }
 }
 

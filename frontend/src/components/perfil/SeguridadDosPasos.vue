@@ -16,7 +16,6 @@ import { mensajeDeError } from '@/service/errores'
 // Estado: 'cargando' | 'inactivo' | 'configurando' | 'activo' | 'desactivando'
 const estado = ref<'cargando' | 'inactivo' | 'configurando' | 'activo' | 'desactivando'>('cargando')
 const configuracion = ref<ConfiguracionDosPasos | null>(null)
-const codigosRespaldo = ref<string[]>([])
 const codigo = ref('')
 const error = ref('')
 const enviando = ref(false)
@@ -54,8 +53,7 @@ async function confirmarActivacion() {
   }
   enviando.value = true
   try {
-    const { codigosRespaldo: respaldo } = await activarDosPasos(codigo.value.trim())
-    codigosRespaldo.value = respaldo
+    await activarDosPasos(codigo.value.trim())
     configuracion.value = null
     codigo.value = ''
     estado.value = 'activo'
@@ -69,13 +67,12 @@ async function confirmarActivacion() {
 async function confirmarDesactivacion() {
   error.value = ''
   if (!codigo.value.trim()) {
-    error.value = 'Escribí un código de tu aplicación o un código de respaldo'
+    error.value = 'Escribí el código que muestra tu aplicación'
     return
   }
   enviando.value = true
   try {
     await desactivarDosPasos(codigo.value.trim())
-    codigosRespaldo.value = []
     codigo.value = ''
     estado.value = 'inactivo'
   } catch (e) {
@@ -127,21 +124,11 @@ function cancelar() {
       </div>
     </div>
 
-    <!-- Activación completada: códigos de respaldo (solo se muestran una vez) -->
-    <div v-if="codigosRespaldo.length" class="respaldo">
-      <p class="texto">
-        Guarda estos códigos de respaldo en un lugar seguro. Cada uno sirve una sola vez y no volverán a mostrarse.
-      </p>
-      <ul class="codigos">
-        <li v-for="c in codigosRespaldo" :key="c"><code>{{ c }}</code></li>
-      </ul>
-    </div>
-
     <!-- Estado activo: desactivar con un código -->
     <div v-if="estado === 'activo'" class="paso">
-      <p class="texto-suave">Para desactivarla, escribe un código de tu aplicación o un código de respaldo.</p>
+      <p class="texto-suave">Para desactivarla, escribe el código que muestra tu aplicación.</p>
       <div class="fila">
-        <InputText v-model="codigo" autocomplete="one-time-code" maxlength="16" placeholder="Código" aria-label="Código para desactivar" />
+        <InputText v-model="codigo" autocomplete="one-time-code" maxlength="6" inputmode="numeric" placeholder="Código" aria-label="Código para desactivar" />
         <Button label="Desactivar" severity="danger" outlined :loading="enviando" @click="confirmarDesactivacion" />
       </div>
     </div>
@@ -211,32 +198,8 @@ function cancelar() {
 
 .clave {
   font-family: ui-monospace, monospace;
-  color: var(--ws-indigo-rico);
+  color: var(--ws-azul-hielo);
   word-break: break-all;
 }
 
-.respaldo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.codigos {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
-  gap: 0.5rem;
-}
-
-.codigos code {
-  display: block;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  background: var(--ws-superficie-2);
-  border: 1px solid var(--ws-borde);
-  font-family: ui-monospace, monospace;
-  color: var(--ws-texto);
-}
 </style>

@@ -353,7 +353,7 @@ watch(() => props.userId, cargar, { immediate: true })
   background: var(--ws-superficie);
   border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(31, 28, 75, 0.16);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.36);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -381,7 +381,7 @@ watch(() => props.userId, cargar, { immediate: true })
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background: rgba(110, 94, 224, 0.12);
+  background: rgba(55, 129, 252, 0.12);
   color: var(--ws-primario);
   font-size: 0.8rem;
   font-weight: 600;

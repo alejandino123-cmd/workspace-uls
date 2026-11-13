@@ -262,7 +262,7 @@ onBeforeUnmount(() => clearTimeout(temporizador))
   padding: 3rem 1.5rem;
   border-radius: 18px;
   background: var(--ws-degradado-suave);
-  border: 1px dashed var(--ws-indigo-suave);
+  border: 1px dashed var(--ws-azul-claro);
 }
 
 .vacio-icono {

@@ -151,14 +151,14 @@ const toggle = () => {
   color: #fff;
   font-size: 1.4rem;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(65, 39, 213, 0.45);
+  box-shadow: 0 4px 18px rgba(25, 81, 252, 0.45);
   transition: background 0.2s;
 }
 .chatbot__fab:hover {
   background: var(--ws-primario);
 }
 .chatbot__fab:focus-visible {
-  outline: 3px solid #bab0ef;
+  outline: 3px solid #cbe9fd;
   outline-offset: 2px;
 }
 
@@ -170,7 +170,7 @@ const toggle = () => {
   background: var(--ws-superficie);
   border-radius: 0.75rem;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(31, 28, 75, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.44);
   transform-origin: bottom right;
 }
 
@@ -225,7 +225,7 @@ const toggle = () => {
   background: var(--ws-superficie);
   color: var(--ws-texto);
   border-bottom-left-radius: 0.2rem;
-  box-shadow: 0 1px 3px rgba(31, 28, 75, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 .chatbot__bubble--user {
   background: var(--ws-primario);

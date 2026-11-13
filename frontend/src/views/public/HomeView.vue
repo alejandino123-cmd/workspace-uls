@@ -199,8 +199,8 @@ const talento = computed(() => talentoDatos.value?.estudiantes ?? [])
   width: min(42rem, 90vw);
   height: 32rem;
   background:
-    radial-gradient(closest-side, rgba(65, 39, 213, 0.35), transparent 70%),
-    radial-gradient(closest-side at 70% 40%, rgba(110, 94, 224, 0.2), transparent 70%);
+    radial-gradient(closest-side, rgba(25, 81, 252, 0.35), transparent 70%),
+    radial-gradient(closest-side at 70% 40%, rgba(55, 129, 252, 0.2), transparent 70%);
   filter: blur(30px);
   z-index: -1;
   pointer-events: none;
@@ -212,9 +212,9 @@ const talento = computed(() => talentoDatos.value?.estudiantes ?? [])
   gap: 0.5rem;
   padding: 0.35rem 0.8rem;
   border-radius: 999px;
-  background: rgba(110, 94, 224, 0.12);
-  border: 1px solid rgba(110, 94, 224, 0.35);
-  color: var(--ws-indigo-rico);
+  background: rgba(55, 129, 252, 0.12);
+  border: 1px solid rgba(55, 129, 252, 0.35);
+  color: var(--ws-azul-hielo);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -257,29 +257,29 @@ const talento = computed(() => talentoDatos.value?.estudiantes ?? [])
   margin: 2rem 0 0;
   padding: 1.1rem 1.5rem;
   border-radius: 16px;
-  border: 1px solid rgba(110, 94, 224, 0.2);
-  background: rgba(186, 176, 239, 0.28);
+  border: 1px solid rgba(55, 129, 252, 0.2);
+  background: rgba(18, 26, 49, 0.6);
   backdrop-filter: blur(8px);
 }
 
 /* Botón principal con degradado azul y brillo */
 .acciones :deep(.p-button:not(.p-button-outlined)) {
-  background: linear-gradient(135deg, #362882 0%, #4127d5 60%, #6e5ee0 100%);
+  background: linear-gradient(135deg, #0b2cb1 0%, #1951fc 60%, #3781fc 100%);
   border-color: transparent;
-  box-shadow: 0 10px 30px -8px rgba(65, 39, 213, 0.7);
+  box-shadow: 0 10px 30px -8px rgba(25, 81, 252, 0.7);
 }
 
 .acciones :deep(.p-button.p-button-outlined) {
-  border-color: rgba(186, 176, 239, 0.45);
+  border-color: rgba(203, 233, 253, 0.45);
   color: var(--ws-texto);
 }
 
 /* Título con brillo sobre la segunda línea */
 .titulo .texto-degradado {
-  background: linear-gradient(90deg, #362882 0%, #4127d5 55%, #6e5ee0 100%);
+  background: linear-gradient(90deg, #3781fc 0%, #cbe9fd 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  filter: drop-shadow(0 0 18px rgba(110, 94, 224, 0.45));
+  filter: drop-shadow(0 0 18px rgba(55, 129, 252, 0.45));
 }
 
 .cifras dt {
@@ -372,7 +372,7 @@ const talento = computed(() => talentoDatos.value?.estudiantes ?? [])
 }
 
 .tecnologia:hover {
-  border-color: var(--ws-indigo-suave);
+  border-color: var(--ws-azul-claro);
   transform: translateY(-2px);
   box-shadow: var(--ws-sombra);
 }
@@ -396,7 +396,7 @@ const talento = computed(() => talentoDatos.value?.estudiantes ?? [])
   padding: 2.5rem 1.5rem;
   border-radius: 18px;
   background: var(--ws-degradado-suave);
-  border: 1px dashed var(--ws-indigo-suave);
+  border: 1px dashed var(--ws-azul-claro);
 }
 
 .vacio-icono {
@@ -437,8 +437,8 @@ const talento = computed(() => talentoDatos.value?.estudiantes ?? [])
   width: 100%;
   height: auto;
   border-radius: 24px;
-  border: 1px solid rgba(110, 94, 224, 0.25);
-  box-shadow: 0 30px 60px -20px rgba(31, 28, 75, 0.32), 0 0 60px -10px rgba(65, 39, 213, 0.45);
+  border: 1px solid rgba(55, 129, 252, 0.25);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.71), 0 0 60px -10px rgba(25, 81, 252, 0.45);
 }
 
 .hero-visual :deep(.escena) {

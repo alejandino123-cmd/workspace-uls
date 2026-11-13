@@ -154,7 +154,6 @@ async function handleCodigo() {
 
           <p class="m-0 text-sm text-texto-suave">
             Abrí tu aplicación de autenticación (por ejemplo, Google Authenticator) y escribí el código de 6 dígitos.
-            También puedes usar un código de respaldo.
           </p>
 
           <FloatLabel variant="on">

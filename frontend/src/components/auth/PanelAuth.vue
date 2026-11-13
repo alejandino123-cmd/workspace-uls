@@ -19,7 +19,7 @@ import heroWorkspace from '@/assets/hero-tecnologia.png'
   position: relative;
   display: none;
   overflow: hidden;
-  background: var(--ws-indigo-profundo);
+  background: var(--ws-azul-oscuro);
   color: #fff;
 }
 
@@ -35,7 +35,7 @@ import heroWorkspace from '@/assets/hero-tecnologia.png'
 .velo {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(31, 28, 75, 0.15) 0%, rgba(31, 28, 75, 0.85) 100%);
+  background: linear-gradient(180deg, rgba(3, 25, 91, 0.15) 0%, rgba(3, 25, 91, 0.85) 100%);
 }
 
 .texto {
@@ -68,7 +68,7 @@ import heroWorkspace from '@/assets/hero-tecnologia.png'
   margin: 0;
   max-width: 28rem;
   line-height: 1.6;
-  color: var(--ws-indigo-palido);
+  color: var(--ws-azul-hielo);
 }
 
 @media (min-width: 1024px) {

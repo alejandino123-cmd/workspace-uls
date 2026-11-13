@@ -87,7 +87,7 @@ export function iconoDataUrl(nombre: string): string | null {
   if (!icono) return null
   // Los logos casi negros se pintan con el azul oscuro de la marca para que se vean bien
   const oscuros = ['000000', '0A0A0A', '0F0F11', '181717']
-  const color = oscuros.includes(icono.hex) ? '#1f1c4b' : `#${icono.hex}`
+  const color = oscuros.includes(icono.hex) ? '#03195b' : `#${icono.hex}`
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="${color}" d="${icono.path}"/></svg>`
   return `data:image/svg+xml;base64,${btoa(svg)}`
 }

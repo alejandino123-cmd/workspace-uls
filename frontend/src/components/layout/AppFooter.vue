@@ -15,7 +15,7 @@ const anioActual = new Date().getFullYear()
 <style scoped>
 .footer {
   width: 100%;
-  background-color: var(--p-content-background);
+  background-color: transparent;
   border-top: 1px solid var(--p-content-border-color);
   margin-top: auto;
 }

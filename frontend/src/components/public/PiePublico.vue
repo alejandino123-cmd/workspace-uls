@@ -45,8 +45,8 @@ const anioActual = new Date().getFullYear()
 <style scoped>
 .pie {
   margin-top: auto;
-  background: var(--ws-indigo-profundo);
-  color: #bab0ef;
+  background: var(--ws-azul-oscuro);
+  color: #cbe9fd;
 }
 
 .interior {
@@ -67,7 +67,7 @@ const anioActual = new Date().getFullYear()
 }
 
 .marca strong {
-  color: var(--ws-indigo-suave);
+  color: var(--ws-azul-claro);
 }
 
 .institucion,
@@ -75,7 +75,7 @@ const anioActual = new Date().getFullYear()
   margin: 0.9rem 0 0;
   font-size: 0.9rem;
   line-height: 1.6;
-  color: #bab0ef;
+  color: #cbe9fd;
 }
 
 .titulo {
@@ -94,23 +94,23 @@ const anioActual = new Date().getFullYear()
 }
 
 .col a {
-  color: #bab0ef;
+  color: #cbe9fd;
   text-decoration: none;
   font-size: 0.95rem;
   width: fit-content;
 }
 
 .col a:hover {
-  color: var(--ws-indigo-suave);
+  color: var(--ws-azul-claro);
   text-decoration: underline;
 }
 
 .legal {
-  border-top: 1px solid rgba(186, 176, 239, 0.18);
+  border-top: 1px solid rgba(203, 233, 253, 0.18);
   padding: 1.1rem 1.5rem;
   text-align: center;
   font-size: 0.85rem;
-  color: #bab0ef;
+  color: #cbe9fd;
 }
 
 @media (max-width: 800px) {

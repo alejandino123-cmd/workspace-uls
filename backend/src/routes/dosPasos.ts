@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { createHash, randomBytes } from "node:crypto";
 import QRCode from "qrcode";
 import { generateSecret, generateURI, verify } from "otplib";
 import { z } from "zod";
@@ -14,48 +13,26 @@ export const dosPasosRouter = Router();
 
 // Segundos de tolerancia para el reloj del celular (un código antes o después)
 const TOLERANCIA_SEGUNDOS = 30;
-const CODIGOS_RESPALDO = 8;
-
-const sha256 = (texto: string) => createHash("sha256").update(texto).digest("hex");
 
 // Quita espacios y guiones, y pasa a mayúsculas: "abcde-fghij" equivale a "ABCDEFGHIJ"
 const normalizar = (codigo: string) => codigo.replace(/[\s-]/g, "").toUpperCase();
 
 const codigoSchema = z.object({ codigo: z.string().trim().min(6).max(16) });
 
-function generarCodigosRespaldo() {
-  const codigos = Array.from({ length: CODIGOS_RESPALDO }, () => {
-    const hex = randomBytes(5).toString("hex").toUpperCase();
-    return `${hex.slice(0, 5)}-${hex.slice(5)}`;
-  });
-  return { codigos, hashes: codigos.map((c) => sha256(normalizar(c))) };
-}
-
-// Acepta un código de 6 dígitos de la app o un código de respaldo (se consume al usarlo)
+// Comprueba el código de 6 dígitos que muestra la aplicación de autenticación
 async function verificarSegundoPaso(
-  usuario: { id: number; totpSecretoCifrado: string | null; codigosRespaldo: string[] },
+  usuario: { totpSecretoCifrado: string | null },
   codigo: string,
 ): Promise<boolean> {
   const limpio = normalizar(codigo);
+  if (!/^\d{6}$/.test(limpio) || !usuario.totpSecretoCifrado) return false;
 
-  if (/^\d{6}$/.test(limpio)) {
-    if (!usuario.totpSecretoCifrado) return false;
-    const resultado = await verify({
-      secret: descifrar(usuario.totpSecretoCifrado),
-      token: limpio,
-      epochTolerance: TOLERANCIA_SEGUNDOS,
-    });
-    return resultado.valid;
-  }
-
-  const hash = sha256(limpio);
-  if (!usuario.codigosRespaldo.includes(hash)) return false;
-  // El filtro "has" hace que, si dos peticiones usan el mismo código a la vez, solo una gane
-  const { count } = await prisma.user.updateMany({
-    where: { id: usuario.id, codigosRespaldo: { has: hash } },
-    data: { codigosRespaldo: usuario.codigosRespaldo.filter((h) => h !== hash) },
+  const resultado = await verify({
+    secret: descifrar(usuario.totpSecretoCifrado),
+    token: limpio,
+    epochTolerance: TOLERANCIA_SEGUNDOS,
   });
-  return count === 1;
+  return resultado.valid;
 }
 
 /**
@@ -108,7 +85,7 @@ dosPasosRouter.post("/configurar", requireAuth, async (req: AuthRequest, res) =>
  *     tags: [Autenticación 2FA]
  *     summary: Paso 2 de 2 para activar la autenticación en dos pasos
  *     description: >
- *       Confirma con un código de la app. Al activarse, devuelve 8 códigos de respaldo que solo se muestran esta vez.
+ *       Confirma con un código de la app para dejar activada la autenticación en dos pasos.
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
  *       required: true
@@ -120,14 +97,7 @@ dosPasosRouter.post("/configurar", requireAuth, async (req: AuthRequest, res) =>
  *             properties:
  *               codigo: { type: string, example: "123456" }
  *     responses:
- *       200:
- *         description: 2FA activada
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 codigosRespaldo: { type: array, items: { type: string }, example: ["A1B2C-D3E4F"] }
+ *       204: { description: 2FA activada }
  *       400: { description: Código incorrecto o no hay configuración pendiente }
  *       401: { $ref: '#/components/responses/NoAutenticado' }
  *       409: { description: Ya estaba activa }
@@ -152,12 +122,11 @@ dosPasosRouter.post("/activar", requireAuth, async (req: AuthRequest, res) => {
   });
   if (!resultado.valid) return res.status(400).json({ error: "El código no es correcto" });
 
-  const { codigos, hashes } = generarCodigosRespaldo();
   await prisma.user.update({
     where: { id: req.user!.id },
-    data: { totpActivo: true, codigosRespaldo: hashes },
+    data: { totpActivo: true },
   });
-  res.json({ codigosRespaldo: codigos });
+  res.status(204).send();
 });
 
 /**
@@ -166,7 +135,7 @@ dosPasosRouter.post("/activar", requireAuth, async (req: AuthRequest, res) => {
  *   post:
  *     tags: [Autenticación 2FA]
  *     summary: Desactivar la autenticación en dos pasos
- *     description: Pide un código de la app o un código de respaldo para confirmar.
+ *     description: Pide un código de la app para confirmar.
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
  *       required: true
@@ -188,7 +157,7 @@ dosPasosRouter.post("/desactivar", requireAuth, async (req: AuthRequest, res) =>
 
   const usuario = await prisma.user.findUnique({
     where: { id: req.user!.id },
-    select: { id: true, totpActivo: true, totpSecretoCifrado: true, codigosRespaldo: true },
+    select: { id: true, totpActivo: true, totpSecretoCifrado: true },
   });
   if (!usuario?.totpActivo) return res.status(400).json({ error: "La autenticación en dos pasos no está activa" });
   if (!(await verificarSegundoPaso(usuario, parsed.data.codigo))) {
@@ -197,7 +166,7 @@ dosPasosRouter.post("/desactivar", requireAuth, async (req: AuthRequest, res) =>
 
   await prisma.user.update({
     where: { id: usuario.id },
-    data: { totpActivo: false, totpSecretoCifrado: null, codigosRespaldo: [] },
+    data: { totpActivo: false, totpSecretoCifrado: null },
   });
   res.status(204).send();
 });
@@ -210,7 +179,7 @@ dosPasosRouter.post("/desactivar", requireAuth, async (req: AuthRequest, res) =>
  *     summary: Segundo paso del inicio de sesión
  *     description: >
  *       Se usa después de /auth/login cuando la respuesta trae requiere2fa. Recibe el tokenTemporal
- *       (vence en 5 minutos) y el código de la app o un código de respaldo. Tras 3 códigos incorrectos
+ *       (vence en 5 minutos) y el código de la app. Tras 3 códigos incorrectos
  *       con el mismo tokenTemporal, hay que volver a iniciar sesión.
  *     requestBody:
  *       required: true
@@ -258,7 +227,6 @@ dosPasosRouter.post("/verificar", limitarPorTokenTemporal, async (req, res) => {
       tokenVersion: true,
       totpActivo: true,
       totpSecretoCifrado: true,
-      codigosRespaldo: true,
     },
   });
   if (!usuario || !usuario.totpActivo || payload.ver !== usuario.tokenVersion) {

@@ -37,7 +37,6 @@ model User {
   tokenVersion Int    @default(0) // sube al cambiar la contraseña: invalida sesiones anteriores
   totpActivo        Boolean  @default(false) // autenticación en dos pasos activa
   totpSecretoCifrado String? // secreto TOTP cifrado (AES-256-GCM)
-  codigosRespaldo   String[] @default([]) // hashes SHA-256 de los códigos de respaldo sin usar
   nombre       String
   rol          Rol      @default(ESTUDIANTE)
   createdAt    DateTime @default(now())

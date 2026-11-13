@@ -11,9 +11,10 @@ import App from './App.vue'
 import router from './router'
 import { queryClient } from './lib/queryClient'
 
-// Preset WorkspaceULS: Aura como base, con la paleta índigo de la marca (solo modo claro).
-// Escala primaria: 500 = Soft Indigo #4127D5 (botones), 600 = Rich Indigo (hover), 700 (activo), 300 = Pale Indigo.
-// Escala de superficies: 0 = blanco, 50-200 = fondos tintados, 950 = Deep Indigo (títulos).
+// Preset WorkspaceULS: Aura como base, con la paleta azul de la marca (un solo tema, oscuro).
+// Escala azul: 400 = Electric Blue (botones), 300 = Bright Blue (hover), 500 = Royal Blue (activo), 100 = Ice Blue.
+// Escala de superficies: 950 = fondo azul noche, 900 = paneles y menús, 800 = superficies elevadas,
+// 400 = Pale Slate (texto secundario), 0 = blanco (títulos).
 const WorkspacePreset = definePreset(Aura, {
   // Esquinas ligeramente redondeadas (sin tarjetas excesivamente redondas)
   primitive: {
@@ -28,52 +29,52 @@ const WorkspacePreset = definePreset(Aura, {
   },
   semantic: {
     primary: {
-      50: '#f5f3fd',
-      100: '#ece9fb',
-      200: '#d9d4f5',
-      300: '#bab0ef',
-      400: '#6e5ee0',
-      500: '#4127d5',
-      600: '#362882',
-      700: '#2c2270',
-      800: '#251e5e',
-      900: '#1f1c4b',
-      950: '#13112e'
+      50: '#eef4ff',
+      100: '#cbe9fd',
+      200: '#9fd0fb',
+      300: '#3781fc',
+      400: '#1951fc',
+      500: '#0b2cb1',
+      600: '#0a2390',
+      700: '#03195b',
+      800: '#0a1d75',
+      900: '#03195b',
+      950: '#020f33'
     },
     colorScheme: {
-      light: {
+      dark: {
         primary: {
-          color: '{primary.500}',
+          color: '{primary.400}',
           contrastColor: '#ffffff',
-          hoverColor: '{primary.600}',
-          activeColor: '{primary.700}'
+          hoverColor: '{primary.300}',
+          activeColor: '{primary.500}'
         },
         highlight: {
-          background: '{primary.100}',
-          focusBackground: '{primary.200}',
-          color: '{primary.700}',
-          focusColor: '{primary.800}'
+          background: 'rgba(25, 81, 252, 0.25)',
+          focusBackground: 'rgba(25, 81, 252, 0.4)',
+          color: '#cbe9fd',
+          focusColor: '#ffffff'
         },
         surface: {
           0: '#ffffff',
-          50: '#f8f7fd',
-          100: '#f0eefa',
-          200: '#e4e1f5',
-          300: '#d3ceee',
-          400: '#b5aedd',
-          500: '#8f88be',
-          600: '#6b6497',
-          700: '#4e4879',
-          800: '#3a3566',
-          900: '#2a2650',
-          950: '#1f1c4b'
+          50: '#f4f6fb',
+          100: '#e5e9f3',
+          200: '#cdd3e3',
+          300: '#b4bccf',
+          400: '#adb5bd',
+          500: '#6c757d',
+          600: '#3a4768',
+          700: '#263153',
+          800: '#1a2543',
+          900: '#121a31',
+          950: '#0a0f1e'
         }
       }
     }
   }
 })
 
-// Solo modo claro: se borra la preferencia de tema guardada en versiones anteriores
+// La plataforma tiene un solo tema (oscuro): se borra la preferencia de tema guardada en versiones anteriores
 try {
   localStorage.removeItem('tema')
 } catch {
@@ -89,8 +90,8 @@ app.use(PrimeVue, {
   theme: {
     preset: WorkspacePreset,
     options: {
-      // Sin modo oscuro: la plataforma usa únicamente el tema claro.
-      darkModeSelector: 'none',
+      // Tema único y oscuro: la clase `app-dark` va fija en <html> (index.html). Sin selector de modo.
+      darkModeSelector: '.app-dark',
       // Con Tailwind v4, poner los estilos de PrimeVue en una capa propia hace que
       // las clases de Tailwind ganen sin necesidad de `!`. Si algo se ve raro,
       // vuelve a `cssLayer: false`.

@@ -193,7 +193,7 @@ watch(() => route.params.id, cargar)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(110, 94, 224, 0.12);
+  background: rgba(55, 129, 252, 0.12);
   color: var(--ws-primario);
   font-size: 2rem;
 }
@@ -221,7 +221,7 @@ watch(() => route.params.id, cargar)
   background: var(--ws-superficie);
   border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(31, 28, 75, 0.16);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.36);
   padding: 1.1rem 1.2rem;
   margin-bottom: 1rem;
 }

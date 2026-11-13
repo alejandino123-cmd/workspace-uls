@@ -275,7 +275,7 @@ const contactos = computed(() => {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ws-indigo-suave);
+  color: var(--ws-azul-claro);
 }
 
 .texto {
@@ -315,7 +315,7 @@ const contactos = computed(() => {
 }
 
 .tec:hover {
-  border-color: var(--ws-indigo-suave);
+  border-color: var(--ws-azul-claro);
 }
 
 .botones {
@@ -342,7 +342,7 @@ const contactos = computed(() => {
 }
 
 .boton-principal:hover {
-  background: #362882;
+  background: #0b2cb1;
 }
 
 .boton-secundario {
@@ -352,7 +352,7 @@ const contactos = computed(() => {
 }
 
 .boton-secundario:hover {
-  border-color: var(--ws-indigo-suave);
+  border-color: var(--ws-azul-claro);
   color: var(--ws-primario);
 }
 
@@ -407,7 +407,7 @@ const contactos = computed(() => {
   padding: 3rem 1.5rem;
   border-radius: 18px;
   background: var(--ws-degradado-suave);
-  border: 1px dashed var(--ws-indigo-suave);
+  border: 1px dashed var(--ws-azul-claro);
 }
 
 .vacio-icono {

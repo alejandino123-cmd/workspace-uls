@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
+import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppPrivateNavbar from '@/components/layout/AppPrivateNavbar.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
+const route = useRoute()
+
+// Menú lateral desplegable en pantallas pequeñas
+const menuAbierto = ref(false)
+watch(() => route.fullPath, () => (menuAbierto.value = false))
 
 // Si la página se recarga, el usuario sale del navegador (localStorage) al store
 onMounted(() => {
@@ -15,22 +21,32 @@ onMounted(() => {
 
 <template>
   <div class="private-layout">
-    <AppPrivateNavbar />
-    <main class="private-content">
-      <RouterView />
-    </main>
-    <AppFooter />
+    <AppSidebar :abierto="menuAbierto" @cerrar="menuAbierto = false" />
+
+    <div class="private-columna">
+      <AppPrivateNavbar @menu="menuAbierto = true" />
+      <main class="private-content">
+        <RouterView />
+      </main>
+      <AppFooter />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .private-layout {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  background-color: var(--ws-fondo);
+  background-image: radial-gradient(900px 500px at 80% -5%, rgba(25, 81, 252, 0.16), transparent 70%);
+  color: var(--ws-texto);
+}
+
+.private-columna {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  background-color: var(--ws-fondo);
-  background-image: radial-gradient(900px 500px at 80% -5%, rgba(65, 39, 213, 0.14), transparent 70%);
-  color: var(--ws-texto); /* slate-800 */
 }
 
 .private-content {
@@ -39,5 +55,11 @@ onMounted(() => {
   max-width: 1120px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .private-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

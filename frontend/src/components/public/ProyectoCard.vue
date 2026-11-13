@@ -86,8 +86,8 @@ const icono = computed(() => {
 
 .tarjeta:hover {
   transform: translateY(-3px);
-  border-color: var(--ws-indigo-suave);
-  box-shadow: 0 18px 40px -18px rgba(65, 39, 213, 0.55);
+  border-color: var(--ws-azul-claro);
+  box-shadow: 0 18px 40px -18px rgba(25, 81, 252, 0.55);
 }
 
 .portada {
@@ -144,8 +144,8 @@ const icono = computed(() => {
 }
 
 .etiqueta-destacada {
-  background: var(--ws-indigo-palido);
-  color: var(--ws-indigo-profundo);
+  background: var(--ws-azul-hielo);
+  color: var(--ws-azul-oscuro);
 }
 
 .cuerpo {

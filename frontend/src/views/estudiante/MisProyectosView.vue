@@ -239,6 +239,8 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
 
 <style scoped>
 .page-header {
+  padding-left: 1rem;
+  border-left: 4px solid var(--ws-azul);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -271,7 +273,7 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
   background: var(--ws-superficie);
   border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(31, 28, 75, 0.16);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.36);
   overflow-x: auto;
 }
 
@@ -333,7 +335,7 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: rgba(110, 94, 224, 0.12);
+  background: rgba(55, 129, 252, 0.12);
   color: var(--ws-primario);
   font-size: 1.5rem;
   margin-bottom: 1rem;

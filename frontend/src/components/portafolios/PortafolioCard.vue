@@ -69,7 +69,7 @@ defineProps<{
 
 .card:hover {
   transform: translateY(-3px);
-  border-color: var(--ws-indigo-suave);
+  border-color: var(--ws-azul-claro);
 }
 
 .card:focus-visible {
@@ -166,7 +166,7 @@ defineProps<{
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   background: var(--ws-superficie-2);
-  color: var(--ws-indigo-rico);
+  color: var(--ws-azul-hielo);
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -182,6 +182,6 @@ defineProps<{
   gap: 0.4rem;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--ws-indigo-suave);
+  color: var(--ws-azul-claro);
 }
 </style>

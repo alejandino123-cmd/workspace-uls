@@ -1,5 +1,4 @@
 // src/controllers/chatController.ts
-import { GoogleGenAI } from "@google/genai";
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 
@@ -12,36 +11,56 @@ const DISPONIBILIDAD: Record<string, string> = {
   SOLO_PROYECTOS: "solo proyectos",
 };
 
-// El cliente se crea al primer uso, así dotenv ya cargó la llave
-let ai: GoogleGenAI | null = null;
-const getAI = (): GoogleGenAI => {
-  if (!ai) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("Falta GEMINI_API_KEY en el .env");
-    ai = new GoogleGenAI({ apiKey });
+// Groq expone una API compatible con OpenAI; se llama con fetch, sin dependencias extra.
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+class GroqError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
   }
-  return ai;
-};
+}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Reintenta si Gemini está saturado (503) o limita la cuota (429),
+async function consultarGroq(model: string, contents: string, systemInstruction: string): Promise<string> {
+  // La llave se lee al usarla, así dotenv ya la cargó
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("Falta GROQ_API_KEY en el .env");
+
+  const respuesta = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: contents },
+      ],
+    }),
+  });
+
+  if (!respuesta.ok) {
+    throw new GroqError(`Groq respondió ${respuesta.status}: ${await respuesta.text()}`, respuesta.status);
+  }
+  const datos = (await respuesta.json()) as { choices?: { message?: { content?: string | null } }[] };
+  return datos.choices?.[0]?.message?.content?.trim() ?? "";
+}
+
+// Reintenta si Groq está saturado (503) o limita la cuota (429),
 // y si sigue fallando prueba con el modelo de respaldo (si lo configuraste).
-async function generarConReintentos(contents: string, systemInstruction: string) {
-  const modelos = [
-    process.env.GEMINI_MODEL ?? "gemini-3.8-flash",
-    process.env.GEMINI_FALLBACK_MODEL,
-  ].filter((m): m is string => Boolean(m));
+async function generarConReintentos(contents: string, systemInstruction: string): Promise<string> {
+  const modelos = [process.env.GROQ_MODEL ?? "openai/gpt-oss-120b", process.env.GROQ_FALLBACK_MODEL].filter(
+    (m): m is string => Boolean(m),
+  );
 
   let ultimoError: unknown;
   for (const model of modelos) {
     for (let intento = 0; intento < 3; intento++) {
       try {
-        return await getAI().models.generateContent({
-          model,
-          contents,
-          config: { systemInstruction },
-        });
+        return await consultarGroq(model, contents, systemInstruction);
       } catch (error) {
         ultimoError = error;
         const status = (error as { status?: number }).status;
@@ -121,10 +140,10 @@ Reglas:
 - No pidas ni compartas correos, carnets ni datos de contacto.
 `;
 
-    // 3. Consultar a Gemini (con reintentos)
+    // 3. Consultar a Groq (con reintentos)
     const response = await generarConReintentos(message, systemInstruction);
 
-    return res.json({ response: response.text ?? "No pude generar una respuesta." });
+    return res.json({ response: response || "No pude generar una respuesta." });
   } catch (error) {
     console.error("Error en Chatbot Controller:", error);
     const status = (error as { status?: number }).status;

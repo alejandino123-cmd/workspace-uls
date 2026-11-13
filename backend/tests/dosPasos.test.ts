@@ -13,13 +13,13 @@ async function registrarYEntrar() {
   return { token: r.body.token as string, id: r.body.user.id as number };
 }
 
-// Configura y activa la 2FA; devuelve el secreto y los códigos de respaldo
+// Configura y activa la 2FA; devuelve el secreto
 async function activar(token: string) {
   const conf = await request(app).post(`${API}/2fa/configurar`).set(bearer(token));
   const secreto = conf.body.secreto as string;
   const codigo = await generate({ secret: secreto });
-  const act = await request(app).post(`${API}/2fa/activar`).set(bearer(token)).send({ codigo });
-  return { secreto, codigosRespaldo: act.body.codigosRespaldo as string[] };
+  await request(app).post(`${API}/2fa/activar`).set(bearer(token)).send({ codigo });
+  return { secreto };
 }
 
 async function loginConPaso(email = datos.email) {
@@ -53,7 +53,7 @@ describe("configurar y activar la 2FA", () => {
     expect(guardado).not.toContain(conf.body.secreto);
   });
 
-  it("activar con un código incorrecto da 400; con el correcto devuelve 8 códigos de respaldo", async () => {
+  it("activar con un código incorrecto da 400; con el correcto la activa", async () => {
     const est = await registrarYEntrar();
     const conf = await request(app).post(`${API}/2fa/configurar`).set(bearer(est.token));
 
@@ -62,8 +62,7 @@ describe("configurar y activar la 2FA", () => {
 
     const codigo = await generate({ secret: conf.body.secreto });
     const ok = await request(app).post(`${API}/2fa/activar`).set(bearer(est.token)).send({ codigo });
-    expect(ok.status).toBe(200);
-    expect(ok.body.codigosRespaldo).toHaveLength(8);
+    expect(ok.status).toBe(204);
     expect((await prisma.user.findUnique({ where: { id: est.id } }))!.totpActivo).toBe(true);
   });
 
@@ -113,20 +112,6 @@ describe("inicio de sesión en dos pasos", () => {
     const paso1 = await loginConPaso();
     const res = await request(app).post(`${API}/2fa/verificar`).send({ tokenTemporal: paso1.tokenTemporal, codigo: "000000" });
     expect(res.status).toBe(401);
-  });
-
-  it("un código de respaldo sirve una sola vez", async () => {
-    const est = await registrarYEntrar();
-    const { codigosRespaldo } = await activar(est.token);
-    const respaldo = codigosRespaldo[0]!;
-
-    const paso1 = await loginConPaso();
-    const primera = await request(app).post(`${API}/2fa/verificar`).send({ tokenTemporal: paso1.tokenTemporal, codigo: respaldo });
-    expect(primera.status).toBe(200);
-
-    const paso2 = await loginConPaso();
-    const segunda = await request(app).post(`${API}/2fa/verificar`).send({ tokenTemporal: paso2.tokenTemporal, codigo: respaldo });
-    expect(segunda.status).toBe(401);
   });
 
   it("el token temporal vence y no vale para otra cuenta", async () => {

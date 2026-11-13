@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import TecnologiaChip from '@/components/tecnologias/TecnologiaChip.vue'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -8,22 +8,16 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Message from 'primevue/message'
 import Paginator from 'primevue/paginator'
-import Select from 'primevue/select'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
 import PortafolioCard from '@/components/portafolios/PortafolioCard.vue'
-import { etiquetaDisponibilidad } from '@/service/perfil'
-import type { Disponibilidad } from '@/service/perfil'
 import type { FiltrosPerfiles } from '@/service/perfiles'
-import { useDestacados, useFiltrosPublicos, usePortafolios } from '@/queries/perfiles'
+import { useDestacados, usePortafolios } from '@/queries/perfiles'
 
 const POR_PAGINA = 9
 
 // Filtros y paginación. El texto se espera 400 ms antes de consultar.
 const buscar = ref('')
 const textoConsulta = ref('')
-const habilidad = ref<string | null>(null)
-const tecnologia = ref<string | null>(null)
-const disponibilidad = ref<Disponibilidad | null>(null)
 const pagina = ref(1)
 
 let temporizador: ReturnType<typeof setTimeout> | undefined
@@ -36,15 +30,8 @@ function alEscribir() {
   }, 400)
 }
 
-watch([habilidad, tecnologia, disponibilidad], () => {
-  pagina.value = 1
-})
-
 const filtros = computed<FiltrosPerfiles>(() => ({
   buscar: textoConsulta.value || undefined,
-  habilidad: habilidad.value ?? undefined,
-  tecnologia: tecnologia.value ?? undefined,
-  disponibilidad: disponibilidad.value ?? undefined,
   page: pagina.value,
   limit: POR_PAGINA,
 }))
@@ -54,25 +41,13 @@ const estudiantes = computed(() => data.value?.estudiantes ?? [])
 const total = computed(() => data.value?.total ?? 0)
 
 const { data: destacados } = useDestacados()
-const { data: opciones } = useFiltrosPublicos()
 
-const opcionesHabilidad = computed(() => (opciones.value?.habilidades ?? []).map((v) => ({ label: v, value: v })))
-const opcionesTecnologia = computed(() => (opciones.value?.tecnologias ?? []).map((v) => ({ label: v, value: v })))
-const opcionesDisponibilidad = computed(() =>
-  (opciones.value?.disponibilidades ?? []).map((v) => ({ label: etiquetaDisponibilidad(v), value: v })),
-)
-
-const hayFiltros = computed(
-  () => !!(textoConsulta.value || habilidad.value || tecnologia.value || disponibilidad.value),
-)
+const hayFiltros = computed(() => !!textoConsulta.value)
 
 function limpiarFiltros() {
   clearTimeout(temporizador)
   buscar.value = ''
   textoConsulta.value = ''
-  habilidad.value = null
-  tecnologia.value = null
-  disponibilidad.value = null
   pagina.value = 1
 }
 
@@ -90,6 +65,20 @@ onBeforeUnmount(() => clearTimeout(temporizador))
       <div>
         <h1 class="titulo">Portafolios</h1>
         <p class="lead">Estudiantes con proyectos validados por la coordinación académica.</p>
+      </div>
+      <div class="filtros">
+        <IconField class="buscador">
+          <InputIcon class="pi pi-search" />
+          <InputText
+            v-model="buscar"
+            maxlength="100"
+            placeholder="Nombre o habilidad"
+            aria-label="Buscar portafolios por nombre o habilidad"
+            fluid
+            @input="alEscribir"
+          />
+        </IconField>
+        <Button v-if="hayFiltros" label="Limpiar" icon="pi pi-times" text @click="limpiarFiltros" />
       </div>
     </header>
 
@@ -109,53 +98,6 @@ onBeforeUnmount(() => clearTimeout(temporizador))
         </article>
       </div>
     </section>
-
-    <div class="filtros">
-      <IconField class="buscador">
-        <InputIcon class="pi pi-search" />
-        <InputText
-          v-model="buscar"
-          maxlength="100"
-          placeholder="Nombre o habilidad"
-          aria-label="Buscar portafolios por nombre o habilidad"
-          fluid
-          @input="alEscribir"
-        />
-      </IconField>
-      <Select
-        v-model="habilidad"
-        :options="opcionesHabilidad"
-        option-label="label"
-        option-value="value"
-        placeholder="Habilidad"
-        show-clear
-        filter
-        aria-label="Filtrar por habilidad"
-        class="filtro"
-      />
-      <Select
-        v-model="tecnologia"
-        :options="opcionesTecnologia"
-        option-label="label"
-        option-value="value"
-        placeholder="Tecnología"
-        show-clear
-        filter
-        aria-label="Filtrar por tecnología"
-        class="filtro"
-      />
-      <Select
-        v-model="disponibilidad"
-        :options="opcionesDisponibilidad"
-        option-label="label"
-        option-value="value"
-        placeholder="Disponibilidad"
-        show-clear
-        aria-label="Filtrar por disponibilidad"
-        class="filtro"
-      />
-      <Button v-if="hayFiltros" label="Limpiar" icon="pi pi-times" text @click="limpiarFiltros" />
-    </div>
 
     <Message v-if="isError" severity="error" :closable="false" class="aviso">
       {{ error?.message ?? 'No se pudieron cargar los portafolios' }}
@@ -257,7 +199,7 @@ onBeforeUnmount(() => clearTimeout(temporizador))
   background: var(--ws-superficie);
   border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(31, 28, 75, 0.16);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.36);
 }
 
 .vacio-icono {
@@ -267,7 +209,7 @@ onBeforeUnmount(() => clearTimeout(temporizador))
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: rgba(110, 94, 224, 0.12);
+  background: rgba(55, 129, 252, 0.12);
   color: var(--ws-primario);
   font-size: 1.5rem;
   margin-bottom: 1rem;
@@ -354,20 +296,17 @@ onBeforeUnmount(() => clearTimeout(temporizador))
   font-weight: 600;
 }
 
+/* Buscador en la cabecera, a la derecha del título */
 .filtros {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 2rem;
 }
 
 .filtros .buscador {
   flex: 1 1 260px;
-}
-
-.filtro {
-  min-width: 11rem;
+  min-width: 240px;
 }
 
 .reintentar {

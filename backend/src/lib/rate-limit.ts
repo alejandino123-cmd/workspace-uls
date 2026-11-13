@@ -24,7 +24,7 @@ export const claveCorreo = (req: Request) => {
 };
 export const limitarPorCorreo = crearLimitador(claveCorreo);
 
-// Chatbot: cada consulta cuesta una llamada a Gemini, así que se limitan todas (no solo las fallidas) por IP
+// Chatbot: cada consulta cuesta una llamada a Groq, así que se limitan todas (no solo las fallidas) por IP
 export const limitarChatbot = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 30,

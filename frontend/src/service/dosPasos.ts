@@ -8,10 +8,6 @@ export interface ConfiguracionDosPasos {
   qr: string
 }
 
-export interface ActivacionDosPasos {
-  codigosRespaldo: string[]
-}
-
 export async function estadoDosPasos() {
   const { data } = await api.get<{ activo: boolean }>('/auth/2fa/estado')
   return data.activo
@@ -23,8 +19,7 @@ export async function configurarDosPasos() {
 }
 
 export async function activarDosPasos(codigo: string) {
-  const { data } = await api.post<ActivacionDosPasos>('/auth/2fa/activar', { codigo })
-  return data
+  await api.post('/auth/2fa/activar', { codigo })
 }
 
 export async function desactivarDosPasos(codigo: string) {
