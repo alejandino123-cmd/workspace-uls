@@ -213,3 +213,40 @@ describe("PUT /perfil — carnet", () => {
     expect(res.body.detalles[0].campo).toBe("carnet");
   });
 });
+describe("PUT /perfil — perfil completo", () => {
+  it("guarda el nombre en la cuenta y los datos profesionales y enlaces en el perfil", async () => {
+    const token = await sesion();
+    const res = await request(app)
+      .put(PERFIL)
+      .set(auth(token))
+      .send({
+        nombre: "Ana Completa",
+        especialidad: "Desarrollo web",
+        biografia: "Me gusta construir interfaces.",
+        github: "https://github.com/ana",
+        telefono: "7777-7777",
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.perfil).toMatchObject({
+      especialidad: "Desarrollo web",
+      github: "https://github.com/ana",
+      telefono: "7777-7777",
+    });
+
+    const completo = await request(app).get(PERFIL).set(auth(token));
+    expect(completo.body.cuenta.nombre).toBe("Ana Completa");
+    expect(completo.body.cuenta.email).toBe(datos.email);
+  });
+
+  it("rechaza un enlace que no es http(s) y permite borrarlo con null", async () => {
+    const token = await sesion();
+    const malo = await request(app).put(PERFIL).set(auth(token)).send({ linkedin: "linkedin.com/ana" });
+    expect(malo.status).toBe(400);
+    expect(malo.body.detalles[0].campo).toBe("linkedin");
+
+    await request(app).put(PERFIL).set(auth(token)).send({ sitioWeb: "https://ana.dev" });
+    const borrado = await request(app).put(PERFIL).set(auth(token)).send({ sitioWeb: null });
+    expect(borrado.status).toBe(200);
+    expect(borrado.body.perfil.sitioWeb).toBeNull();
+  });
+});

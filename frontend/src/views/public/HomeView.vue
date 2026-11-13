@@ -1,632 +1,466 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
-import Card from 'primevue/card'
-import { etiquetaDisponibilidad } from '@/service/perfil'
+import Message from 'primevue/message'
 import Chatbot from '@/components/Chatbot.vue'
-import {
-  listarPerfiles,
-  obtenerPortafolio,
-  type PerfilPublicoResumen,
-  type ProyectoPublico,
-} from '@/service/perfiles'
+import heroWorkspace from '@/assets/hero-tecnologia.png'
+import ProyectoCard from '@/components/public/ProyectoCard.vue'
+import PortafolioCard from '@/components/portafolios/PortafolioCard.vue'
+import { useDestacados, usePortafolios } from '@/queries/perfiles'
+import { useProyectosPublicos, useTecnologiasPublicas } from '@/queries/catalogo'
 
-// Portafolios destacados: GET /perfiles es público (no requiere sesión).
-// Solo aparecen estudiantes con al menos un proyecto VALIDADO y publicado.
-interface Destacado {
-  estudiante: PerfilPublicoResumen
-  principal: ProyectoPublico | null // primer proyecto del portafolio
-}
+// Cifras reales: se piden con límite 1 solo para leer el total
+const { data: portafolios } = usePortafolios({ limit: 1 })
+const { data: catalogoTotal } = useProyectosPublicos({ limit: 1 })
+const totalEstudiantes = computed(() => portafolios.value?.total ?? 0)
+const totalProyectos = computed(() => catalogoTotal.value?.total ?? 0)
 
-const esqueletos = [1, 2, 3]
-const destacados = ref<Destacado[]>([])
-const cargando = ref(true)
-const fallo = ref(false)
+// Proyectos destacados por Coordinación (ya filtrados: validados, publicados y destacados)
+const { data: destacadosDatos, isPending: cargandoDestacados } = useDestacados()
+const destacados = computed(() => destacadosDatos.value ?? [])
 
-const leyenda = computed(() => {
-  if (cargando.value) return 'Cargando portafolios…'
-  if (fallo.value) return 'No pudimos cargar los portafolios en este momento.'
-  if (destacados.value.length === 0) return 'Próximamente: proyectos validados y publicados por estudiantes.'
-  return 'Estudiantes con proyectos validados por la coordinación.'
-})
+// Últimos proyectos publicados (ya filtrados: validados y publicados)
+const { data: recientesDatos, isPending: cargandoRecientes, isError: errorRecientes } = useProyectosPublicos({ limit: 6 })
+const recientes = computed(() => recientesDatos.value?.proyectos ?? [])
 
-function iniciales(nombre: string): string {
-  return (
-    nombre
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p.charAt(0).toUpperCase())
-      .join('') || 'WU'
-  )
-}
+// Tecnologías con al menos un proyecto publicado
+const { data: tecnologiasDatos } = useTecnologiasPublicas(12)
+const tecnologias = computed(() => tecnologiasDatos.value ?? [])
 
-// Tecnologías del proyecto principal; si no tiene, se usan las habilidades del perfil.
-function etiquetas(d: Destacado): string[] {
-  const lista = d.principal?.tecnologias?.length ? d.principal.tecnologias : d.estudiante.habilidades
-  return lista.slice(0, 6)
-}
-
-onMounted(async () => {
-  try {
-    const { estudiantes } = await listarPerfiles({ limit: 3 })
-
-    // Si el portafolio de alguno falla, esa tarjeta se muestra igual, sin proyecto.
-    destacados.value = await Promise.all(
-      estudiantes.map(async (estudiante): Promise<Destacado> => {
-        try {
-          const portafolio = await obtenerPortafolio(estudiante.id)
-          return { estudiante, principal: portafolio.proyectos[0] ?? null }
-        } catch {
-          return { estudiante, principal: null }
-        }
-      }),
-    )
-  } catch {
-    fallo.value = true
-  } finally {
-    cargando.value = false
-  }
-})
+// Talento: estudiantes con portafolio público
+const { data: talentoDatos } = usePortafolios({ limit: 6 })
+const talento = computed(() => talentoDatos.value?.estudiantes ?? [])
 </script>
 
 <template>
   <div class="home">
     <!-- Hero -->
     <section class="hero">
-      <h1 class="hero-title">Portafolios de estudiantes, en un solo lugar</h1>
-      <p class="hero-subtitle">
-        Workspace ULS conecta a estudiantes con empresas mostrando proyectos reales,
-        validados por la coordinación académica.
-      </p>
-      <div class="hero-actions">
-        <Button as="router-link" to="/portafolios" label="Ver portafolios" icon="pi pi-search" />
-        <Button
-          as="router-link"
-          to="/login"
-          label="Soy estudiante"
-          icon="pi pi-user"
-          severity="secondary"
-          outlined
-        />
+      <div class="hero-texto">
+        <span class="etiqueta">
+          <i class="pi pi-code" aria-hidden="true"></i>
+          Portafolio académico
+        </span>
+        <h1 class="titulo">
+            Mentes creativas, <span class="texto-degradado">soluciones reales.</span>
+        </h1>
+        <p class="lead">
+          Un espacio donde el código cobra vida. 
+          Conoce los proyectos, herramientas y propuestas tecnológicas que reflejan la creatividad, 
+          el esfuerzo y la formación de los estudiantes de Ciencias de la Computación de la ULS.
+        </p>
+        <div class="acciones">
+          <Button as="router-link" to="/proyectos" label="Explorar proyectos" icon="pi pi-arrow-right" icon-pos="right" size="large" />
+          <Button as="router-link" to="/portafolios" label="Ver estudiantes" severity="secondary" outlined size="large" />
+        </div>
+        <p class="nota">"Explora repositorios, tecnologías utilizadas y perfiles listos para el mundo laboral."</p>
+
+        <dl class="cifras" aria-label="Cifras de la plataforma">
+          <div>
+            <dt>Proyectos publicados</dt>
+            <dd>{{ totalProyectos }}</dd>
+          </div>
+          <div>
+            <dt>Estudiantes con portafolio</dt>
+            <dd>{{ totalEstudiantes }}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="hero-visual">
+        <img :src="heroWorkspace" alt="Estudiantes de Ciencias de la Computación creando proyectos con Workspace ULS" class="hero-imagen" />
       </div>
     </section>
 
-    <!-- Portafolios destacados -->
-    <section class="section" aria-labelledby="destacados-titulo">
-      <h2 id="destacados-titulo" class="section-title">Portafolios destacados</h2>
-      <p class="section-lead">{{ leyenda }}</p>
-
-      <div v-if="!cargando && !fallo && destacados.length" class="grid">
-        <Card v-for="d in destacados" :key="d.estudiante.id" class="welcome-card">
-          <template #header>
-            <div class="welcome-header">
-              <div class="avatar-circle">
-                <img
-                  v-if="d.estudiante.fotoUrl"
-                  :src="d.estudiante.fotoUrl"
-                  :alt="d.estudiante.nombre"
-                  class="avatar-img"
-                />
-                <span v-else class="avatar-initials">{{ iniciales(d.estudiante.nombre) }}</span>
-              </div>
-              <div class="project-title-section">
-                <h3 class="project-title">{{ d.estudiante.nombre }}</h3>
-                <div class="project-meta">
-                  <span class="project-subtitle">
-                    {{ etiquetaDisponibilidad(d.estudiante.disponibilidad) || 'Estudiante ULS' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <template #title>
-            <div class="technologies-section">
-              <span v-for="t in etiquetas(d)" :key="t" class="tech-tag">{{ t }}</span>
-              <span v-if="!etiquetas(d).length" class="tech-empty">Sin tecnologías registradas</span>
-            </div>
-          </template>
-
-          <template #content>
-            <div class="project-content">
-              <template v-if="d.principal">
-                <h4 class="project-name">{{ d.principal.titulo }}</h4>
-                <p class="project-description">{{ d.principal.descripcion }}</p>
-                <div class="project-links">
-                  <a
-                    v-if="d.principal.urlRepositorio"
-                    :href="d.principal.urlRepositorio"
-                    target="_blank"
-                    rel="noopener"
-                    class="project-link"
-                  >
-                    <i class="pi pi-github"></i> GitHub
-                  </a>
-                  <a
-                    v-if="d.principal.urlDemo"
-                    :href="d.principal.urlDemo"
-                    target="_blank"
-                    rel="noopener"
-                    class="project-link"
-                  >
-                    <i class="pi pi-external-link"></i> Demo
-                  </a>
-                </div>
-              </template>
-              <p v-else class="project-description">Este estudiante aún no tiene proyectos para mostrar.</p>
-            </div>
-          </template>
-
-          <template #footer>
-            <div class="project-badges">
-              <span class="badge approval-badge">
-                <i class="pi pi-check"></i> Sello de Aprobación del Docente
-              </span>
-              <span class="badge validated-badge">
-                <i class="pi pi-star"></i>
-                {{ d.estudiante.totalProyectos }}
-                {{ d.estudiante.totalProyectos === 1 ? 'Proyecto Validado' : 'Proyectos Validados' }}
-              </span>
-            </div>
-
-            <div class="progress-section">
-              <div class="progress-header">
-                <span class="progress-text">Avance Académico</span>
-                <span class="progress-percentage">{{ d.estudiante.porcentajeAvance }}%</span>
-              </div>
-              <div class="progress-bar-container">
-                <div class="progress-bar" :style="{ width: `${d.estudiante.porcentajeAvance}%` }"></div>
-              </div>
-            </div>
-
-            <div class="card-action">
-              <Button
-                as="router-link"
-                :to="`/portafolios/${d.estudiante.id}`"
-                label="Ver portafolio"
-                icon="pi pi-arrow-right"
-                icon-pos="right"
-                text
-              />
-            </div>
-          </template>
-        </Card>
-      </div>
-
-      <!-- Esqueleto: mientras carga o si aún no hay portafolios públicos -->
-      <div v-else class="grid" aria-hidden="true">
-        <div v-for="n in esqueletos" :key="n" class="skeleton">
-          <div class="sk-head">
-            <span class="sk-avatar"></span>
-            <div class="sk-lines">
-              <span class="sk-bar sk-bar-lg"></span>
-              <span class="sk-bar sk-bar-sm"></span>
-            </div>
-          </div>
-          <div class="sk-chips">
-            <span class="sk-chip"></span>
-            <span class="sk-chip"></span>
-            <span class="sk-chip sk-chip-short"></span>
-          </div>
-          <div class="sk-foot">
-            <span class="sk-pill"><i class="pi pi-check-circle"></i> Validado</span>
-          </div>
+    <!-- Proyectos destacados -->
+    <section class="bloque" aria-labelledby="destacados-titulo">
+      <div class="cabecera">
+        <div>
+          <h2 id="destacados-titulo" class="subtitulo">Proyectos destacados</h2>
+          <p class="sub">Seleccionados por la coordinación académica.</p>
         </div>
       </div>
 
-      <div v-if="!cargando && !fallo && destacados.length" class="ver-todos">
-        <Button
-          as="router-link"
-          to="/portafolios"
-          label="Ver todos los portafolios"
-          icon="pi pi-arrow-right"
-          icon-pos="right"
-          text
-        />
+      <div v-if="destacados.length" class="grid">
+        <ProyectoCard v-for="p in destacados" :key="p.id" :proyecto="p" destacado />
       </div>
-       <div v-if="!cargando && !fallo && destacados.length" class="ver-todos">
-        ...
+
+      <div v-else-if="cargandoDestacados" class="estado" role="status">Cargando proyectos…</div>
+
+      <div v-else class="vacio">
+        <span class="vacio-icono"><i class="pi pi-star" aria-hidden="true"></i></span>
+        <h3 class="vacio-titulo">Próximamente</h3>
+        <p class="vacio-texto">
+          La coordinación seleccionará proyectos destacados. Aparecerán aquí en cuanto estén publicados.
+        </p>
       </div>
     </section>
 
-    <Chatbot /> 
-    
+    <!-- Últimos proyectos -->
+    <section class="bloque" aria-labelledby="recientes-titulo">
+      <div class="cabecera">
+        <div>
+          <h2 id="recientes-titulo" class="subtitulo">Últimos proyectos publicados</h2>
+          <p class="sub">Trabajos aprobados y visibles para todo el público.</p>
+        </div>
+        <RouterLink to="/proyectos" class="ver-todos">
+          Ver todos los proyectos <i class="pi pi-arrow-right" aria-hidden="true"></i>
+        </RouterLink>
+      </div>
+
+      <Message v-if="errorRecientes" severity="error" :closable="false">No se pudieron cargar los proyectos.</Message>
+      <div v-else-if="recientes.length" class="grid">
+        <ProyectoCard v-for="p in recientes" :key="p.id" :proyecto="p" />
+      </div>
+      <div v-else-if="cargandoRecientes" class="estado" role="status">Cargando proyectos…</div>
+      <div v-else class="vacio">
+        <span class="vacio-icono"><i class="pi pi-folder-open" aria-hidden="true"></i></span>
+        <h3 class="vacio-titulo">Aún no hay proyectos publicados</h3>
+        <p class="vacio-texto">Cuando la coordinación apruebe y se publique un proyecto, aparecerá aquí.</p>
+      </div>
+    </section>
+
+    <!-- Tecnologías -->
+    <section v-if="tecnologias.length" class="bloque" aria-labelledby="tecnologias-titulo">
+      <div class="cabecera">
+        <div>
+          <h2 id="tecnologias-titulo" class="subtitulo">Explora por tecnologías</h2>
+          <p class="sub">Herramientas usadas en los proyectos publicados.</p>
+        </div>
+      </div>
+      <ul class="tecnologias">
+        <li v-for="t in tecnologias" :key="t.nombre">
+          <RouterLink :to="{ name: 'proyectos', query: { tecnologia: t.nombre } }" class="tecnologia">
+            <span>{{ t.nombre }}</span>
+            <span class="conteo">{{ t.total }}</span>
+          </RouterLink>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Talento -->
+    <section v-if="talento.length" class="bloque" aria-labelledby="talento-titulo">
+      <div class="cabecera">
+        <div>
+          <h2 id="talento-titulo" class="subtitulo">Talento estudiantil</h2>
+          <p class="sub">Estudiantes con perfil público y proyectos validados.</p>
+        </div>
+        <RouterLink to="/portafolios" class="ver-todos">
+          Ver todos los estudiantes <i class="pi pi-arrow-right" aria-hidden="true"></i>
+        </RouterLink>
+      </div>
+      <div class="grid">
+        <PortafolioCard v-for="e in talento" :key="e.id" :estudiante="e" />
+      </div>
+    </section>
+
+    <Chatbot />
   </div>
 </template>
 
 <style scoped>
-/* ── Tokens locales ── El violeta primario y el modo claro vienen del tema global (main.ts) */
 .home {
-  --ws-accent: #9155fd;
-  --ws-accent-hover: #804bdf;
-  --ws-accent-soft: rgba(145, 85, 253, 0.12);
-  --ws-text: #1e293b;
-  --ws-muted: #64748b;
-  --ws-border: #e7e5ec;
-  --ws-skeleton: #ece9f3;
-  --ws-shadow: 0 2px 10px rgba(58, 53, 65, 0.1);
-
-  --p-button-border-radius: 8px;
-  --p-button-outlined-secondary-border-color: #cbd5e1;
-  --p-button-outlined-secondary-color: #334155;
-  --p-button-outlined-secondary-hover-background: #f1f5f9;
-  --p-button-outlined-secondary-active-background: #e2e8f0;
-
-  --p-card-background: #fff;
-  --p-card-color: var(--ws-text);
-  --p-card-border-radius: 12px;
-  --p-card-shadow: var(--ws-shadow);
-
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3.5rem;
 }
 
-/* ── Hero ── */
+/* Hero: dos columnas (texto + composición gráfica) con un halo azul de fondo */
 .hero {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 5rem 1.5rem 3rem;
-  text-align: center;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 3rem;
+  padding: 4rem 0 3rem;
+  isolation: isolate;
 }
 
-.hero-title {
-  font-size: clamp(1.9rem, 1.2rem + 2.6vw, 2.75rem);
+/* Cuadrícula decorativa solo en la portada, desvanecida hacia los bordes */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--ws-cuadricula) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ws-cuadricula) 1px, transparent 1px);
+  background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(ellipse at 60% 40%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 60% 40%, #000 0%, transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -6rem -10% auto auto;
+  width: min(42rem, 90vw);
+  height: 32rem;
+  background:
+    radial-gradient(closest-side, rgba(65, 39, 213, 0.35), transparent 70%),
+    radial-gradient(closest-side at 70% 40%, rgba(110, 94, 224, 0.2), transparent 70%);
+  filter: blur(30px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(110, 94, 224, 0.12);
+  border: 1px solid rgba(110, 94, 224, 0.35);
+  color: var(--ws-indigo-rico);
+  font-size: 0.78rem;
   font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  color: var(--ws-text);
-  margin: 0 0 1rem 0;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.hero-subtitle {
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: var(--ws-muted);
-  max-width: 56ch;
-  margin: 0 auto 2rem;
+.titulo {
+  margin: 1.25rem 0 1rem;
+  font-size: clamp(2.2rem, 4.8vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--ws-texto);
 }
 
-.hero-actions {
+.lead {
+  margin: 0 0 1.75rem;
+  max-width: 34rem;
+  font-size: 1.08rem;
+  line-height: 1.65;
+  color: var(--ws-texto-suave);
+}
+
+.acciones {
   display: flex;
-  justify-content: center;
-  gap: 0.75rem;
   flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-/* ── Secciones ── */
-.section {
-  max-width: 1120px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 2rem 1.5rem 4rem;
+.nota {
+  margin: 1.25rem 0 0;
+  font-size: 0.92rem;
+  color: var(--ws-texto-suave);
 }
 
-.section-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--ws-text);
-  margin: 0 0 0.5rem 0;
-  text-align: center;
+/* Cifras como barra de cristal, estilo panel técnico */
+.cifras {
+  display: flex;
+  gap: 2.5rem;
+  margin: 2rem 0 0;
+  padding: 1.1rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(110, 94, 224, 0.2);
+  background: rgba(186, 176, 239, 0.28);
+  backdrop-filter: blur(8px);
 }
 
-.section-lead {
-  color: var(--ws-muted);
-  text-align: center;
-  margin: 0 0 1.75rem 0;
+/* Botón principal con degradado azul y brillo */
+.acciones :deep(.p-button:not(.p-button-outlined)) {
+  background: linear-gradient(135deg, #362882 0%, #4127d5 60%, #6e5ee0 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 30px -8px rgba(65, 39, 213, 0.7);
+}
+
+.acciones :deep(.p-button.p-button-outlined) {
+  border-color: rgba(186, 176, 239, 0.45);
+  color: var(--ws-texto);
+}
+
+/* Título con brillo sobre la segunda línea */
+.titulo .texto-degradado {
+  background: linear-gradient(90deg, #362882 0%, #4127d5 55%, #6e5ee0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 0 18px rgba(110, 94, 224, 0.45));
+}
+
+.cifras dt {
+  font-size: 0.82rem;
+  color: var(--ws-texto-suave);
+}
+
+.cifras dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--ws-texto);
+}
+
+/* Secciones */
+.bloque {
+  margin-top: 3.5rem;
+}
+
+.cabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.subtitulo {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ws-texto);
+}
+
+.sub {
+  margin: 0.3rem 0 0;
+  color: var(--ws-texto-suave);
+}
+
+.ver-todos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ws-primario);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ver-todos:hover {
+  text-decoration: underline;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 1.25rem;
-  align-items: stretch;
 }
 
-.ver-todos {
-  display: flex;
-  justify-content: center;
-  margin-top: 1.5rem;
+.estado {
+  color: var(--ws-texto-suave);
+  padding: 2rem 0;
+  text-align: center;
 }
 
-/* ── Esqueleto ── */
-.skeleton {
-  background: #fff;
-  border: 1px solid var(--ws-border);
-  border-radius: 12px;
-  box-shadow: var(--ws-shadow);
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.sk-head {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.sk-avatar {
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--ws-accent-soft);
-}
-
-.sk-lines {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.sk-bar {
-  display: block;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--ws-skeleton);
-}
-.sk-bar-lg {
-  width: 70%;
-}
-.sk-bar-sm {
-  width: 45%;
-}
-
-.sk-chips {
+/* Tecnologías */
+.tecnologias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-.sk-chip {
-  width: 64px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--ws-skeleton);
-}
-.sk-chip-short {
-  width: 44px;
-}
-
-.sk-foot {
-  margin-top: auto;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--ws-border);
-}
-
-.sk-pill {
+.tecnologia {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  background: var(--ws-accent-soft);
-  color: var(--ws-accent-hover);
-  font-size: 0.8rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 12px;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
+  color: var(--ws-texto);
   font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
-/* ── Tarjeta de portafolio ── */
-.welcome-card {
-  width: 100%;
-  border: 1px solid var(--ws-border);
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+.tecnologia:hover {
+  border-color: var(--ws-indigo-suave);
+  transform: translateY(-2px);
+  box-shadow: var(--ws-sombra);
 }
 
-.welcome-header {
+.conteo {
+  min-width: 1.6rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--ws-superficie-2);
+  color: var(--ws-primario);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* Estado vacío */
+.vacio {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--ws-border);
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  border-radius: 18px;
+  background: var(--ws-degradado-suave);
+  border: 1px dashed var(--ws-indigo-suave);
 }
 
-.avatar-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--ws-accent), #8b5cf6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-  color: white;
+.vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 14px;
+  background: var(--ws-degradado);
+  color: #fff;
   font-size: 1.3rem;
-  font-weight: 700;
+  margin-bottom: 1rem;
 }
 
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-initials {
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.project-title-section {
-  flex: 1;
-  min-width: 0;
-}
-
-.project-title {
+.vacio-titulo {
+  margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--ws-text);
-  margin: 0 0 0.35rem 0;
+  color: var(--ws-texto);
 }
 
-.project-meta {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.project-subtitle {
-  font-size: 0.9rem;
-  color: var(--ws-muted);
-}
-
-.technologies-section {
-  display: flex;
-  gap: 0.6rem;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--ws-border);
-  flex-wrap: wrap;
-}
-
-.tech-tag {
-  padding: 0.35rem 0.8rem;
-  border-radius: 999px;
-  background: rgba(56, 189, 248, 0.12);
-  color: #0ea5e9;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: 1px solid rgba(56, 189, 248, 0.2);
-}
-
-.tech-empty {
-  font-size: 0.85rem;
-  color: var(--ws-muted);
-  font-weight: 400;
-}
-
-.project-content {
-  padding: 1.25rem 1.5rem;
-}
-
-.project-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ws-text);
-  margin: 0 0 0.5rem 0;
-}
-
-.project-description {
-  color: var(--ws-text);
+.vacio-texto {
+  margin: 0.4rem 0 0;
+  max-width: 28rem;
+  color: var(--ws-texto-suave);
   line-height: 1.6;
-  margin: 0 0 1.25rem 0;
-  font-size: 0.95rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.project-links {
-  display: flex;
-  gap: 1.5rem;
-}
-
-.project-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--ws-accent);
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: color 0.2s;
-}
-
-.project-link:hover {
-  color: var(--ws-accent-hover);
-}
-
-.project-badges {
-  display: flex;
-  gap: 0.6rem;
-  padding: 1.25rem 1.5rem;
-  border-top: 1px solid var(--ws-border);
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.approval-badge {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: white;
-  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
-}
-
-.validated-badge {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.badge i {
-  font-size: 0.9rem;
-}
-
-.progress-section {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--ws-border);
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.6rem;
-}
-
-.progress-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ws-text);
-}
-
-.progress-percentage {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--ws-accent);
-}
-
-.progress-bar-container {
-  height: 8px;
-  background: var(--ws-border);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--ws-accent), #8b5cf6);
-  border-radius: 999px;
-  transition: width 1s ease-in-out;
-}
-
-.card-action {
-  display: flex;
-  justify-content: center;
-  padding: 0 1.5rem 1rem;
-}
-
-@media (max-width: 480px) {
+@media (max-width: 900px) {
   .hero {
-    padding: 3rem 1.25rem 2rem;
-  }
-  .grid {
     grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 2.5rem 0 1.5rem;
+  }
+
+  .hero-imagen {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 24px;
+  border: 1px solid rgba(110, 94, 224, 0.25);
+  box-shadow: 0 30px 60px -20px rgba(31, 28, 75, 0.32), 0 0 60px -10px rgba(65, 39, 213, 0.45);
+}
+
+.hero-visual :deep(.escena) {
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 600px) {
+  .home {
+    padding: 0 1rem 2.5rem;
+  }
+
+  .cifras {
+    gap: 1.5rem;
+  }
+
+  .cifras dd {
+    font-size: 1.5rem;
+  }
+
+  .subtitulo {
+    font-size: 1.35rem;
   }
 }
 </style>

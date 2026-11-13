@@ -20,7 +20,7 @@ export async function listarPendientes() {
 }
 
 // Mismo formato que los pendientes; `validacion` trae la fecha y el comentario de la revisión
-export type ProyectoValidado = ProyectoPendiente
+export type ProyectoValidado = ProyectoPendiente & { destacado: boolean }
 
 export async function listarValidados() {
   const { data } = await api.get<ProyectoValidado[]>('/validaciones/validados')
@@ -89,5 +89,11 @@ export interface ProyectosDelEstudiante {
 
 export async function listarProyectosDeEstudiante(userId: number) {
   const { data } = await api.get<ProyectosDelEstudiante>(`/validaciones/estudiantes/${userId}/proyectos`)
+  return data
+}
+
+// Destacar un proyecto validado y publicado (aparece en la portada de portafolios)
+export async function marcarDestacado(proyectoId: number, destacado: boolean) {
+  const { data } = await api.put(`/validaciones/proyectos/${proyectoId}/destacado`, { destacado })
   return data
 }

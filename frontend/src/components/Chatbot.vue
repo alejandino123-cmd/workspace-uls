@@ -147,18 +147,18 @@ const toggle = () => {
   height: 3.5rem;
   border: none;
   border-radius: 50%;
-  background: #9155fd;
+  background: var(--ws-primario);
   color: #fff;
   font-size: 1.4rem;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(145, 85, 253, 0.45);
+  box-shadow: 0 4px 18px rgba(65, 39, 213, 0.45);
   transition: background 0.2s;
 }
 .chatbot__fab:hover {
-  background: #804bdf;
+  background: var(--ws-primario);
 }
 .chatbot__fab:focus-visible {
-  outline: 3px solid #c4a8ff;
+  outline: 3px solid #bab0ef;
   outline-offset: 2px;
 }
 
@@ -167,10 +167,10 @@ const toggle = () => {
   height: min(520px, calc(100vh - 8rem));
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--ws-superficie);
   border-radius: 0.75rem;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(46, 38, 61, 0.2);
+  box-shadow: 0 8px 32px rgba(31, 28, 75, 0.2);
   transform-origin: bottom right;
 }
 
@@ -179,7 +179,7 @@ const toggle = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1rem;
-  background: #9155fd;
+  background: var(--ws-primario);
   color: #fff;
 }
 .chatbot__title {
@@ -203,7 +203,7 @@ const toggle = () => {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  background: #f7f7fb;
+  background: var(--ws-fondo);
 }
 .chatbot__row {
   display: flex;
@@ -222,18 +222,18 @@ const toggle = () => {
   word-break: break-word;
 }
 .chatbot__bubble--bot {
-  background: #fff;
-  color: #1e293b;
+  background: var(--ws-superficie);
+  color: var(--ws-texto);
   border-bottom-left-radius: 0.2rem;
-  box-shadow: 0 1px 3px rgba(46, 38, 61, 0.08);
+  box-shadow: 0 1px 3px rgba(31, 28, 75, 0.08);
 }
 .chatbot__bubble--user {
-  background: #9155fd;
+  background: var(--ws-primario);
   color: #fff;
   border-bottom-right-radius: 0.2rem;
 }
 .chatbot__typing {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   font-style: italic;
 }
 
@@ -241,15 +241,15 @@ const toggle = () => {
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: #fff;
-  border-top: 1px solid #e2e8f0;
+  background: var(--ws-superficie);
+  border-top: 1px solid var(--ws-borde);
 }
 .chatbot__input {
   flex: 1;
 }
 .chatbot__send {
-  background: #9155fd !important;
-  border-color: #9155fd !important;
+  background: var(--ws-primario) !important;
+  border-color: var(--ws-primario) !important;
 }
 
 /* Animación solo al abrir/cerrar (respuesta a la acción del usuario) */

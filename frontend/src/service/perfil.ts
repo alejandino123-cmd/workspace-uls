@@ -20,15 +20,34 @@ export interface Perfil {
   disponibilidad: Disponibilidad | null
   habilidades: string[]
   fotoUrl: string | null
+  cvUrl: string | null
+  telefono: string | null
+  ubicacion: string | null
+  especialidad: string | null
+  biografia: string | null
+  github: string | null
+  linkedin: string | null
+  sitioWeb: string | null
+}
+
+// Datos de la cuenta (el correo es solo lectura)
+export interface Cuenta {
+  nombre: string
+  email: string
 }
 
 // PUT /perfil acepta cualquier subconjunto de estos campos.
-// La foto no va aquí: se cambia con PUT /perfil/foto.
-export type PerfilInput = Partial<Omit<Perfil, 'id' | 'fotoUrl'>>
+// El nombre se guarda en la cuenta; el resto en el perfil. La foto va en PUT /perfil/foto.
+export type PerfilInput = Partial<Omit<Perfil, 'id' | 'fotoUrl'>> & { nombre?: string }
 
 export async function obtenerPerfil() {
-  const { data } = await api.get<{ perfil: Perfil }>('/perfil')
+  const { data } = await api.get<{ perfil: Perfil; cuenta: Cuenta }>('/perfil')
   return data.perfil
+}
+
+export async function obtenerPerfilCompleto() {
+  const { data } = await api.get<{ perfil: Perfil; cuenta: Cuenta }>('/perfil')
+  return data
 }
 
 export async function actualizarPerfil(datos: PerfilInput) {
@@ -48,4 +67,16 @@ export async function subirFotoPerfil(archivo: File) {
 export async function quitarFotoPerfil() {
   const { data } = await api.delete<{ perfil: Perfil }>('/perfil/foto')
   return data.perfil
+}
+
+// Currículum en PDF (máximo 5 MB). El backend lo guarda en Cloudinary y devuelve el perfil con cvUrl.
+export async function subirCv(archivo: File) {
+  const datos = new FormData()
+  datos.append('cv', archivo)
+  const { data } = await api.put<{ cvUrl: string | null }>('/perfil/cv', datos)
+  return data.cvUrl
+}
+
+export async function quitarCv() {
+  await api.delete('/perfil/cv')
 }

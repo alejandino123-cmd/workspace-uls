@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../service/api'
+import { queryClient } from '../lib/queryClient'
 
 export interface Usuario {
   id: number
@@ -28,8 +29,17 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('user', JSON.stringify(u))
   }
 
-  async function login(email: string, password: string) {
+  // Devuelve el token temporal si la cuenta tiene autenticación en dos pasos (no guarda sesión todavía)
+  async function login(email: string, password: string): Promise<string | null> {
     const { data } = await api.post('/auth/login', { email, password })
+    if (data.requiere2fa) return data.tokenTemporal as string
+    guardarSesion(data.token, data.user)
+    return null
+  }
+
+  // Segundo paso del login: el código de la aplicación completa la sesión
+  async function verificarDosPasos(tokenTemporal: string, codigo: string) {
+    const { data } = await api.post('/auth/2fa/verificar', { tokenTemporal, codigo })
     guardarSesion(data.token, data.user)
   }
 
@@ -50,13 +60,22 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Tras cambiar el nombre en el perfil, la barra y el menú lo muestran sin volver a iniciar sesión
+  function actualizarNombre(nombre: string) {
+    if (!user.value) return
+    user.value = { ...user.value, nombre }
+    localStorage.setItem('user', JSON.stringify(user.value))
+  }
+
   function logout() {
     token.value = null
     user.value = null
     fotoUrl.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    // Que los datos de esta cuenta no queden en caché para la siguiente
+    queryClient.clear()
   }
 
-  return { token, user, fotoUrl, isAuthenticated, rol, login, fetchUser, register, logout }
+  return { token, user, fotoUrl, isAuthenticated, rol, login, verificarDosPasos, fetchUser, register, logout, actualizarNombre }
 })

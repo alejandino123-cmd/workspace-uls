@@ -5,3 +5,6 @@ node_modules
 /src/generated/prisma
 
 uploads/
+
+# Respaldo local de la base de datos (datos reales, no versionar)
+respaldo_columnas.sql

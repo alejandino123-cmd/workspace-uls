@@ -35,6 +35,7 @@ const proyectoSelect = {
   tecnologias: true,
   estadoValidacion: true,
   updatedAt: true,
+  destacado: true,
   validacion: { select: { comentario: true, createdAt: true } },
   createdAt: true,
 } as const;
@@ -430,4 +431,51 @@ validacionesRouter.get("/estudiantes/:userId/proyectos", async (req, res) => {
 
   const { perfil, ...resto } = u;
   res.json({ estudiante: { ...resto, carnet: perfil?.carnet ?? null }, proyectos });
+});
+
+/**
+ * @openapi
+ * /api/v1/validaciones/proyectos/{id}/destacado:
+ *   put:
+ *     tags: [Validaciones]
+ *     summary: Marcar o quitar un proyecto como destacado
+ *     description: >
+ *       Solo COORDINACION. Para destacar, el proyecto debe estar VALIDADO y publicado por su estudiante.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: integer, minimum: 1 } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [destacado]
+ *             properties:
+ *               destacado: { type: boolean }
+ *     responses:
+ *       200: { description: Proyecto actualizado }
+ *       400: { description: El proyecto no está validado y publicado, o datos inválidos }
+ *       401: { $ref: '#/components/responses/NoAutenticado' }
+ *       403: { $ref: '#/components/responses/SinPermiso' }
+ *       404: { description: Proyecto no encontrado }
+ */
+validacionesRouter.put("/proyectos/:id/destacado", async (req, res) => {
+  const id = idSchema.safeParse(req.params.id);
+  if (!id.success) return res.status(400).json({ error: "El id debe ser un entero positivo" });
+  const parsed = z.object({ destacado: z.boolean() }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json(validationError(parsed.error));
+
+  const actual = await prisma.proyecto.findUnique({ where: { id: id.data }, select: { estadoValidacion: true, publicado: true } });
+  if (!actual) return res.status(404).json({ error: "Proyecto no encontrado" });
+  if (parsed.data.destacado && (actual.estadoValidacion !== "VALIDADO" || !actual.publicado)) {
+    return res.status(400).json({ error: "Solo se pueden destacar proyectos validados y publicados por su estudiante" });
+  }
+
+  const proyecto = await prisma.proyecto.update({
+    where: { id: id.data },
+    data: { destacado: parsed.data.destacado },
+    select: proyectoSelect,
+  });
+  res.json(proyecto);
 });

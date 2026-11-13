@@ -152,3 +152,51 @@ describe("GET /api/v1/perfiles (listado público)", () => {
     expect((await request(app).get("/api/v1/perfiles?limit=0")).status).toBe(400);
   });
 });
+
+describe("búsqueda, filtros y destacados del portafolio público", () => {
+  async function portafolioPublico(email: string, nombre: string, habilidades: string[], tecnologias: string[]) {
+    const est = await estudiante(email, nombre);
+    await request(app).put("/api/v1/perfil").set(bearer(est.token)).send({ habilidades, disponibilidad: "TIEMPO_PARCIAL" });
+    const id = await proyecto(est.token, `Proyecto de ${nombre}`);
+    await prisma.proyecto.update({
+      where: { id },
+      data: { estadoValidacion: "VALIDADO", publicado: true, tecnologias },
+    });
+    return { est, proyectoId: id };
+  }
+
+  it("busca por nombre o por habilidad exacta", async () => {
+    await portafolioPublico("ana@uls.edu.sv", "Ana López", ["Vue.js"], []);
+    await portafolioPublico("beto@uls.edu.sv", "Beto Mejía", ["Node.js"], []);
+    expect((await request(app).get("/api/v1/perfiles?buscar=beto")).body.total).toBe(1);
+    expect((await request(app).get("/api/v1/perfiles?buscar=Vue.js")).body.estudiantes[0].nombre).toBe("Ana López");
+  });
+
+  it("filtra por habilidad, tecnología y disponibilidad", async () => {
+    await portafolioPublico("ana@uls.edu.sv", "Ana López", ["Vue.js"], ["React"]);
+    await portafolioPublico("beto@uls.edu.sv", "Beto Mejía", ["Node.js"], ["Express"]);
+    expect((await request(app).get("/api/v1/perfiles?habilidad=Node.js")).body.total).toBe(1);
+    expect((await request(app).get("/api/v1/perfiles?tecnologia=React")).body.estudiantes[0].nombre).toBe("Ana López");
+    expect((await request(app).get("/api/v1/perfiles?disponibilidad=SOLO_PROYECTOS")).body.total).toBe(0);
+    expect((await request(app).get("/api/v1/perfiles?disponibilidad=TIEMPO_PARCIAL")).body.total).toBe(2);
+  });
+
+  it("GET /perfiles/filtros lista habilidades y tecnologías públicas", async () => {
+    await portafolioPublico("ana@uls.edu.sv", "Ana López", ["Vue.js"], ["React"]);
+    const r = await request(app).get("/api/v1/perfiles/filtros");
+    expect(r.body.habilidades).toEqual(["Vue.js"]);
+    expect(r.body.tecnologias).toEqual(["React"]);
+    expect(r.body.disponibilidades).toContain("TIEMPO_PARCIAL");
+  });
+
+  it("destacados: solo los marcados que siguen validados y publicados", async () => {
+    const ana = await portafolioPublico("ana@uls.edu.sv", "Ana López", [], []);
+    const beto = await portafolioPublico("beto@uls.edu.sv", "Beto Mejía", [], []);
+    await prisma.proyecto.update({ where: { id: ana.proyectoId }, data: { destacado: true } });
+    await prisma.proyecto.update({ where: { id: beto.proyectoId }, data: { destacado: true, publicado: false } });
+
+    const r = await request(app).get("/api/v1/perfiles/destacados");
+    expect(r.body).toHaveLength(1);
+    expect(r.body[0].estudiante.nombre).toBe("Ana López");
+  });
+});

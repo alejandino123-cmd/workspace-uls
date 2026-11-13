@@ -3,6 +3,9 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth";
 import { etiquetasSchema, validationError } from "../lib/validation";
+import multer from "multer";
+import { borrarFoto, cloudinaryConfigurado, subirImagenProyecto } from "../lib/cloudinary";
+import { MAX_BYTES_IMAGEN, esImagenPermitida } from "../lib/imagen";
 
 export const proyectosRouter = Router();
 proyectosRouter.use(requireAuth, requireRole("ESTUDIANTE"));
@@ -48,8 +51,10 @@ const proyectoSelect = {
   urlDemo: true,
   urlDocumentacion: true,
   tecnologias: true,
+  imagenUrl: true,
   estadoValidacion: true,
   publicado: true,
+  destacado: true,
   createdAt: true,
   updatedAt: true,
   validacion: { select: { comentario: true, createdAt: true } },
@@ -262,3 +267,139 @@ proyectosRouter.delete("/:id", async (req: AuthRequest, res) => {
   if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
   res.status(204).send();
 });
+
+// Vista previa del proyecto: se recibe en memoria y se guarda en Cloudinary (mismas reglas que la foto de perfil)
+const uploadImagen = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_BYTES_IMAGEN, files: 1 },
+});
+
+function recibirImagenProyecto(req: AuthRequest, res: Response, next: (err?: unknown) => void) {
+  uploadImagen.single("imagen")(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      const error =
+        err.code === "LIMIT_FILE_SIZE" ? "La imagen pesa más de 2 MB" : "No se pudo leer la imagen";
+      return res.status(400).json({ error });
+    }
+    if (err) return next(err);
+    next();
+  });
+}
+
+function requerirCloudinaryProyectos(_req: AuthRequest, res: Response, next: (err?: unknown) => void) {
+  if (!cloudinaryConfigurado()) {
+    return res.status(503).json({ error: "La subida de imágenes no está configurada" });
+  }
+  next();
+}
+
+/**
+ * @openapi
+ * /api/v1/proyectos/{id}/imagen:
+ *   put:
+ *     tags: [Proyectos]
+ *     summary: Subir o cambiar la vista previa de mi proyecto
+ *     description: >
+ *       Imagen en multipart/form-data, campo `imagen` (JPG, PNG o WebP, máximo 2 MB), recortada a 16:9.
+ *       Como cambia lo que se ve públicamente, el proyecto vuelve a PENDIENTE, igual que al editar su contenido.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: integer } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [imagen]
+ *             properties:
+ *               imagen: { type: string, format: binary }
+ *     responses:
+ *       200: { description: Proyecto con la nueva imagenUrl }
+ *       400: { $ref: '#/components/responses/DatosInvalidos' }
+ *       401: { $ref: '#/components/responses/NoAutenticado' }
+ *       404: { description: No existe o no es tuyo }
+ *       502: { description: Cloudinary no pudo guardar la imagen }
+ *       503: { description: La subida de imágenes no está configurada }
+ *   delete:
+ *     tags: [Proyectos]
+ *     summary: Quitar la vista previa de mi proyecto
+ *     description: Igual que al subirla, el proyecto vuelve a PENDIENTE.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: integer } }
+ *     responses:
+ *       200: { description: Proyecto sin imagen }
+ *       401: { $ref: '#/components/responses/NoAutenticado' }
+ *       404: { description: No existe o no es tuyo }
+ */
+proyectosRouter.put(
+  "/:id/imagen",
+  requerirCloudinaryProyectos,
+  recibirImagenProyecto,
+  async (req: AuthRequest, res) => {
+    const id = parseId(req.params.id, res);
+    if (id === null) return;
+    if (!req.file) return res.status(400).json({ error: "Envía una imagen en el campo «imagen»" });
+    if (!esImagenPermitida(req.file.buffer)) {
+      return res.status(400).json({ error: "La imagen debe ser JPG, PNG o WebP" });
+    }
+
+    const actual = await prisma.proyecto.findFirst({
+      where: { id, perfil: { userId: req.user!.id } },
+      select: { id: true, imagenPublicId: true },
+    });
+    if (!actual) return res.status(404).json({ error: "Proyecto no encontrado" });
+
+    const subida = await subirImagenProyecto(req.file.buffer, id).catch((e) => {
+      console.error("No se pudo subir la imagen del proyecto:", e);
+      return null;
+    });
+    if (!subida) return res.status(502).json({ error: "No se pudo guardar la imagen. Intenta de nuevo." });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.proyecto.update({
+        where: { id },
+        data: { imagenUrl: subida.url, imagenPublicId: subida.publicId, estadoValidacion: "PENDIENTE" },
+      });
+      await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
+    });
+
+    if (actual.imagenPublicId) {
+      await borrarFoto(actual.imagenPublicId).catch((e) =>
+        console.error("No se pudo borrar la imagen anterior de Cloudinary:", e),
+      );
+    }
+
+    const proyecto = await prisma.proyecto.findUnique({ where: { id }, select: proyectoSelect });
+    res.json(proyecto);
+  },
+);
+
+proyectosRouter.delete("/:id/imagen", async (req: AuthRequest, res) => {
+  const id = parseId(req.params.id, res);
+  if (id === null) return;
+  const actual = await prisma.proyecto.findFirst({
+    where: { id, perfil: { userId: req.user!.id } },
+    select: { id: true, imagenPublicId: true },
+  });
+  if (!actual) return res.status(404).json({ error: "Proyecto no encontrado" });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.proyecto.update({
+      where: { id },
+      data: { imagenUrl: null, imagenPublicId: null, estadoValidacion: "PENDIENTE" },
+    });
+    await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
+  });
+
+  if (actual.imagenPublicId) {
+    await borrarFoto(actual.imagenPublicId).catch((e) =>
+      console.error("No se pudo borrar la imagen de Cloudinary:", e),
+    );
+  }
+
+  const proyecto = await prisma.proyecto.findUnique({ where: { id }, select: proyectoSelect });
+  res.json(proyecto);
+});
+

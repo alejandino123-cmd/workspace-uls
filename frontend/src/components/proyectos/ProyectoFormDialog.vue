@@ -9,6 +9,10 @@ import Button from 'primevue/button'
 import {
   actualizarProyecto,
   crearProyecto,
+  quitarImagenProyecto,
+  subirImagenProyecto,
+  TAMANO_MAX_IMAGEN,
+  TIPOS_IMAGEN,
   type Proyecto,
   type ProyectoInput,
 } from '@/service/proyectos'
@@ -35,6 +39,12 @@ const form = reactive({
 const error = ref('')
 const guardando = ref(false)
 
+// Vista previa: se guarda aparte del formulario (con su propio endpoint)
+const imagenUrl = ref<string | null>(null)
+const subiendoImagen = ref(false)
+const errorImagen = ref('')
+const entradaImagen = ref<HTMLInputElement | null>(null)
+
 const editando = computed(() => props.proyecto !== null)
 const titulo = computed(() => (editando.value ? 'Editar proyecto' : 'Nuevo proyecto'))
 
@@ -51,8 +61,54 @@ watch(
     form.urlDemo = p?.urlDemo ?? ''
     form.urlDocumentacion = p?.urlDocumentacion ?? ''
     form.tecnologias = [...(p?.tecnologias ?? [])]
+    imagenUrl.value = p?.imagenUrl ?? null
+    errorImagen.value = ''
   },
 )
+
+// Sube o cambia la vista previa al elegir un archivo. Solo disponible para proyectos ya creados.
+async function alElegirImagen(evento: Event) {
+  const input = evento.target as HTMLInputElement
+  const archivo = input.files?.[0]
+  input.value = ''
+  if (!archivo || !props.proyecto) return
+
+  errorImagen.value = ''
+  if (!TIPOS_IMAGEN.includes(archivo.type)) {
+    errorImagen.value = 'La imagen debe ser JPG, PNG o WebP'
+    return
+  }
+  if (archivo.size > TAMANO_MAX_IMAGEN) {
+    errorImagen.value = 'La imagen pesa más de 2 MB'
+    return
+  }
+
+  subiendoImagen.value = true
+  try {
+    const actualizado = await subirImagenProyecto(props.proyecto.id, archivo)
+    imagenUrl.value = actualizado.imagenUrl
+    emit('guardado')
+  } catch (e) {
+    errorImagen.value = mensajeDeError(e, 'No se pudo subir la imagen')
+  } finally {
+    subiendoImagen.value = false
+  }
+}
+
+async function quitarImagen() {
+  if (!props.proyecto) return
+  errorImagen.value = ''
+  subiendoImagen.value = true
+  try {
+    await quitarImagenProyecto(props.proyecto.id)
+    imagenUrl.value = null
+    emit('guardado')
+  } catch (e) {
+    errorImagen.value = mensajeDeError(e, 'No se pudo quitar la imagen')
+  } finally {
+    subiendoImagen.value = false
+  }
+}
 
 const esUrl = (v: string) => /^https?:\/\/\S+$/i.test(v)
 
@@ -121,9 +177,52 @@ async function guardar() {
   >
     <div class="form">
       <Message v-if="editando" severity="info" size="small" :closable="false">
-        Si cambias el contenido, el proyecto vuelve a estado pendiente y la coordinación
+        Si cambias el contenido o la vista previa, el proyecto vuelve a estado pendiente y la coordinación
         deberá validarlo otra vez.
       </Message>
+
+      <div class="campo">
+        <span class="etiqueta">Vista previa</span>
+        <div class="previa" :class="{ vacia: !imagenUrl }">
+          <img v-if="imagenUrl" :src="imagenUrl" alt="Vista previa del proyecto" />
+          <div v-else class="previa-vacia">
+            <i class="pi pi-image" aria-hidden="true"></i>
+            <span>{{ editando ? 'Sin vista previa' : 'Podrás agregarla al guardar el proyecto' }}</span>
+          </div>
+        </div>
+
+        <div v-if="editando" class="previa-acciones">
+          <input
+            ref="entradaImagen"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="oculto"
+            aria-label="Elegir vista previa"
+            @change="alElegirImagen"
+          />
+          <Button
+            :label="imagenUrl ? 'Cambiar imagen' : 'Subir imagen'"
+            icon="pi pi-upload"
+            size="small"
+            outlined
+            :loading="subiendoImagen"
+            @click="entradaImagen?.click()"
+          />
+          <Button
+            v-if="imagenUrl"
+            label="Quitar"
+            icon="pi pi-trash"
+            size="small"
+            text
+            severity="danger"
+            :disabled="subiendoImagen"
+            @click="quitarImagen"
+          />
+          <small class="ayuda">JPG, PNG o WebP, máximo 2 MB. Se recorta a 16:9.</small>
+        </div>
+
+        <Message v-if="errorImagen" severity="error" size="small" :closable="false">{{ errorImagen }}</Message>
+      </div>
 
       <div class="campo">
         <label for="p-titulo">Título</label>
@@ -186,9 +285,58 @@ async function guardar() {
   gap: 0.4rem;
 }
 
-.campo label {
+.campo label,
+.etiqueta {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #1e293b;
+  color: var(--ws-texto);
+}
+
+.previa {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--ws-borde);
+  background: var(--ws-superficie-2);
+}
+
+.previa img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.previa-vacia {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--ws-texto-suave);
+  background: var(--ws-degradado-suave);
+}
+
+.previa-vacia i {
+  font-size: 1.6rem;
+  color: var(--ws-primario);
+}
+
+.previa-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ayuda {
+  color: var(--ws-texto-suave);
+  width: 100%;
+}
+
+.oculto {
+  display: none;
 }
 </style>

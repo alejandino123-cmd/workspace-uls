@@ -1,26 +1,31 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import AppNavbar from '@/components/layout/AppNavbar.vue'
-import AppFooter from '@/components/layout/AppFooter.vue'
+import NavbarPublico from '@/components/public/NavbarPublico.vue'
+import PiePublico from '@/components/public/PiePublico.vue'
 </script>
 
 <template>
-  <div class="public-layout">
-    <AppNavbar />
+  <div class="layout">
+    <NavbarPublico />
+
     <main class="public-content">
       <RouterView />
     </main>
-    <AppFooter />
+
+    <PiePublico />
   </div>
 </template>
 
 <style scoped>
-.public-layout {
+.layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--p-content-background);
-  color: var(--p-text-color);
+  /* Fondo oscuro con un resplandor azul sutil arriba; sin cuadrícula en todo el sitio */
+  background:
+    radial-gradient(900px 500px at 80% -5%, rgba(65, 39, 213, 0.16), transparent 70%),
+    var(--ws-fondo);
+  color: var(--ws-texto);
 }
 
 .public-content {

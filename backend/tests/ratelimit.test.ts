@@ -44,3 +44,18 @@ describe("límite de intentos fallidos por correo+IP", () => {
     expect((await request(app).post("/login").send({ email: "a@uls.edu.sv" })).status).toBe(200);
   });
 });
+
+describe("límite del chatbot", () => {
+  it("responde 429 después de 30 consultas desde la misma IP", async () => {
+    const { limitarChatbot } = await import("../src/lib/rate-limit");
+    const app = express();
+    app.use(express.json());
+    app.post("/chat", limitarChatbot, (_req, res) => res.json({ response: "ok" }));
+    for (let i = 0; i < 30; i++) {
+      expect((await request(app).post("/chat").send({ message: "hola" })).status).toBe(200);
+    }
+    const bloqueado = await request(app).post("/chat").send({ message: "hola" });
+    expect(bloqueado.status).toBe(429);
+    expect(bloqueado.body.error).toContain("demasiadas consultas");
+  });
+});

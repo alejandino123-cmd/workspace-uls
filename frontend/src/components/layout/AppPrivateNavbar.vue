@@ -73,13 +73,17 @@ const menu = ref()
 
 function salir() {
   authStore.logout()
-  router.push('/login')
+  // Después de cerrar sesión, vuelve a la vista pública
+  router.push('/')
 }
 
-const userItems: MenuItem[] = [
+const userItems = computed<MenuItem[]>(() => [
   // TODO: agregar "Cambiar contraseña" cuando exista esa pantalla (PUT /auth/password)
+  ...(authStore.rol === 'ESTUDIANTE'
+    ? [{ label: 'Editar perfil', icon: 'pi pi-user-edit', command: () => router.push('/perfil/editar') }]
+    : []),
   { label: 'Cerrar sesión', icon: 'pi pi-sign-out', command: salir },
-]
+])
 
 function toggleMenu(event: Event) {
   menu.value.toggle(event)

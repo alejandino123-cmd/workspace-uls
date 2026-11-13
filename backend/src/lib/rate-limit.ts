@@ -24,6 +24,16 @@ export const claveCorreo = (req: Request) => {
 };
 export const limitarPorCorreo = crearLimitador(claveCorreo);
 
+// Chatbot: cada consulta cuesta una llamada a Gemini, así que se limitan todas (no solo las fallidas) por IP
+export const limitarChatbot = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Has hecho demasiadas consultas al asistente. Espera unos minutos." },
+});
+
 // Cambio de contraseña: va después de requireAuth, así que la clave es el usuario autenticado.
 export const limitarPorUsuario = crearLimitador((req) => {
   const usuario = (req as Request & { user?: { id: number } }).user?.id ?? "anonimo";

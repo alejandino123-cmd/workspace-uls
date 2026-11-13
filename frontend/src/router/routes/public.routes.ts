@@ -12,6 +12,19 @@ export const publicRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/views/public/HomeView.vue'),
       },
       {
+        // Catálogo de proyectos publicados (buscador, filtros y paginación)
+        path: 'proyectos',
+        name: 'proyectos',
+        component: () => import('@/views/public/ProyectosView.vue'),
+      },
+      {
+        path: 'proyectos/:id',
+        name: 'proyecto',
+        component: () => import('@/views/public/ProyectoDetalleView.vue'),
+        props: (ruta) => ({ id: Number(ruta.params.id) }),
+      },
+      {
+        // Directorio de estudiantes con perfil público
         path: 'portafolios',
         name: 'portafolios',
         component: () => import('@/views/public/PortafoliosView.vue'),

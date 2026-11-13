@@ -58,6 +58,15 @@ model PerfilEstudiante {
   habilidades        String[]        @default([])
   fotoUrl      String?
   fotoPublicId String?
+  telefono     String?
+  ubicacion    String?
+  especialidad String?
+  biografia    String?
+  github       String?
+  linkedin     String?
+  sitioWeb     String?
+  cvUrl        String?  // currículum en PDF (Cloudinary)
+  cvPublicId   String?  // identificador interno en Cloudinary; nunca se devuelve
 
   proyectos Proyecto[]
 }
@@ -71,9 +80,12 @@ model Proyecto {
   urlRepositorio   String?
   urlDemo          String?
   urlDocumentacion String?
+  imagenUrl        String?          // vista previa del proyecto (Cloudinary)
+  imagenPublicId   String?          // identificador interno en Cloudinary; nunca se devuelve
   tecnologias      String[]         @default([])
   estadoValidacion EstadoValidacion @default(PENDIENTE)
   publicado        Boolean          @default(false)
+  destacado        Boolean          @default(false) // lo marca Coordinación para la sección de destacados
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

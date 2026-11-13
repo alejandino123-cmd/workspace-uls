@@ -301,3 +301,27 @@ describe("GET /validaciones/validados", () => {
     expect((await request(app).get(`${API}/validaciones/validados`)).status).toBe(401);
   });
 });
+
+describe("PUT /validaciones/proyectos/:id/destacado", () => {
+  it("solo destaca proyectos validados y publicados", async () => {
+    const coord = await coordinacion();
+    const ana = await estudiante("ana@uls.edu.sv");
+    const id = await proyecto(ana.token);
+    const h = bearer(coord.token);
+
+    const sinValidar = await request(app).put(`${API}/validaciones/proyectos/${id}/destacado`).set(h).send({ destacado: true });
+    expect(sinValidar.status).toBe(400);
+
+    await prisma.proyecto.update({ where: { id }, data: { estadoValidacion: "VALIDADO", publicado: true } });
+    const ok = await request(app).put(`${API}/validaciones/proyectos/${id}/destacado`).set(h).send({ destacado: true });
+    expect(ok.status).toBe(200);
+    expect(ok.body.destacado).toBe(true);
+  });
+
+  it("403 para estudiante", async () => {
+    const ana = await estudiante("ana@uls.edu.sv");
+    const id = await proyecto(ana.token);
+    const res = await request(app).put(`${API}/validaciones/proyectos/${id}/destacado`).set(bearer(ana.token)).send({ destacado: true });
+    expect(res.status).toBe(403);
+  });
+});

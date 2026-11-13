@@ -13,7 +13,9 @@ import { validacionesRouter } from "./routes/validaciones";
 import { usuariosRouter } from "./routes/usuarios";
 import { dosPasosRouter } from "./routes/dosPasos";
 import { perfilFotoRouter } from "./routes/perfilFoto";
-import { chatRouter } from "./routes/chat";   
+import { perfilCvRouter } from "./routes/perfilCv";
+import { chatRouter } from "./routes/chat";
+import { catalogoRouter } from "./routes/catalogo";
 
 const openApiSpec = swaggerJsdoc({
   definition: {
@@ -129,12 +131,14 @@ app.use("/api/v1", pingRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/auth/2fa", dosPasosRouter);
 app.use("/api/v1/perfil/foto", perfilFotoRouter);
+app.use("/api/v1/perfil/cv", perfilCvRouter);
 app.use("/api/v1/perfil", perfilRouter);
 app.use("/api/v1/proyectos", proyectosRouter);
 app.use("/api/v1/usuarios", usuariosRouter);
 app.use("/api/v1/validaciones", validacionesRouter);
 app.use("/api/v1/perfiles", perfilesRouter);
 app.use("/api/v1/chat", chatRouter);
+app.use("/api/v1/catalogo", catalogoRouter);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (

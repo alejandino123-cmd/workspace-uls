@@ -18,10 +18,36 @@ const perfilSelect = {
   disponibilidad: true,
   habilidades: true,
   fotoUrl: true,
+  cvUrl: true,
+  telefono: true,
+  ubicacion: true,
+  especialidad: true,
+  biografia: true,
+  github: true,
+  linkedin: true,
+  sitioWeb: true,
 } as const;
+
+// Enlace opcional: vacío o null lo borra; si no, debe ser http(s)
+const enlaceSchema = z
+  .string()
+  .trim()
+  .max(200, "Máximo 200 caracteres")
+  .url("Enlace inválido")
+  .refine((u) => /^https?:\/\//i.test(u), "El enlace debe empezar con http:// o https://")
+  .nullable()
+  .optional();
 
 const updateSchema = z
   .object({
+    nombre: z.string().trim().min(2, "El nombre es muy corto").max(100).optional(),
+    telefono: z.string().trim().max(20, "Máximo 20 caracteres").nullable().optional(),
+    ubicacion: z.string().trim().max(100, "Máximo 100 caracteres").nullable().optional(),
+    especialidad: z.string().trim().max(100, "Máximo 100 caracteres").nullable().optional(),
+    biografia: z.string().trim().max(1000, "Máximo 1000 caracteres").nullable().optional(),
+    github: enlaceSchema,
+    linkedin: enlaceSchema,
+    sitioWeb: enlaceSchema,
     carnet: carnetSchema.optional(),
     porcentajeAvance: z.number().int().min(0, "Mínimo 0").max(100, "Máximo 100").optional(),
     historialAcademico: z.string().trim().max(2000, "Máximo 2000 caracteres").nullable().optional(),
@@ -56,13 +82,16 @@ const updateSchema = z
  */
 perfilRouter.get("/", async (req: AuthRequest, res) => {
   const userId = req.user!.id;
-  const perfil = await prisma.perfilEstudiante.upsert({
-    where: { userId },
-    create: { userId },
-    update: {},
-    select: perfilSelect,
-  });
-  res.json({ perfil });
+  const [perfil, cuenta] = await Promise.all([
+    prisma.perfilEstudiante.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+      select: perfilSelect,
+    }),
+    prisma.user.findUnique({ where: { id: userId }, select: { nombre: true, email: true } }),
+  ]);
+  res.json({ perfil, cuenta });
 });
 
 /**
@@ -126,10 +155,14 @@ perfilRouter.put("/", async (req: AuthRequest, res) => {
     if (enUso) return res.status(409).json({ error: "El carnet ya está registrado" });
   }
 
+  // El nombre se guarda en la cuenta; el resto de campos en el perfil
+  const { nombre, ...datosPerfil } = parsed.data;
+  if (nombre) await prisma.user.update({ where: { id: userId }, data: { nombre } });
+
   const perfil = await prisma.perfilEstudiante.upsert({
     where: { userId },
-    create: { userId, ...parsed.data },
-    update: parsed.data,
+    create: { userId, ...datosPerfil },
+    update: datosPerfil,
     select: perfilSelect,
   });
 

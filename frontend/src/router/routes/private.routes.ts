@@ -22,6 +22,12 @@ export const privateRoutes: Array<RouteRecordRaw> = [
         meta: { roles: ['ESTUDIANTE'] },
       },
       {
+        path: 'perfil/editar',
+        name: 'perfil-editar',
+        component: () => import('@/views/estudiante/EditarPerfilView.vue'),
+        meta: { roles: ['ESTUDIANTE'] },
+      },
+      {
         path: 'admin',
         name: 'admin',
         component: () => import('@/views/admin/AdminDashboard.vue'),

@@ -1,6 +1,6 @@
 import { api } from './api'
 import type { Disponibilidad } from './perfil'
-import type { Proyecto } from './proyectos'
+import type { ProyectoResumen } from './catalogo'
 
 // Endpoints públicos: no requieren sesión.
 
@@ -21,13 +21,54 @@ export interface ListaPerfiles {
   estudiantes: PerfilPublicoResumen[]
 }
 
-export async function listarPerfiles(params: { buscar?: string; page?: number; limit?: number } = {}) {
-  const { data } = await api.get<ListaPerfiles>('/perfiles', { params })
+export interface FiltrosPerfiles {
+  buscar?: string
+  habilidad?: string
+  tecnologia?: string
+  disponibilidad?: Disponibilidad
+  page?: number
+  limit?: number
+}
+
+export async function listarPerfiles(params: FiltrosPerfiles = {}) {
+  // Sin valores vacíos en la URL
+  const limpio = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))
+  const { data } = await api.get<ListaPerfiles>('/perfiles', { params: limpio })
   return data
 }
 
-// Los proyectos públicos no traen `publicado` ni `validacion`
-export type ProyectoPublico = Omit<Proyecto, 'publicado' | 'validacion'>
+export interface OpcionesFiltro {
+  habilidades: string[]
+  tecnologias: string[]
+  disponibilidades: Disponibilidad[]
+}
+
+export async function obtenerFiltros() {
+  const { data } = await api.get<OpcionesFiltro>('/perfiles/filtros')
+  return data
+}
+
+// Mismo formato que el catálogo público (ver service/catalogo.ts)
+export type ProyectoDestacado = ProyectoResumen
+
+// Proyecto dentro del portafolio de un estudiante (sin datos del estudiante, que ya se muestran arriba)
+export interface ProyectoPublico {
+  id: number
+  titulo: string
+  descripcion: string
+  urlRepositorio: string | null
+  urlDemo: string | null
+  urlDocumentacion: string | null
+  tecnologias: string[]
+  imagenUrl: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export async function listarDestacados() {
+  const { data } = await api.get<ProyectoDestacado[]>('/perfiles/destacados')
+  return data
+}
 
 export interface PortafolioPublico {
   estudiante: { id: number; nombre: string }
@@ -36,6 +77,12 @@ export interface PortafolioPublico {
     disponibilidad: Disponibilidad | null
     habilidades: string[]
     fotoUrl: string | null
+    especialidad: string | null
+    biografia: string | null
+    github: string | null
+    linkedin: string | null
+    sitioWeb: string | null
+    cvUrl: string | null
   }
   proyectos: ProyectoPublico[]
 }

@@ -47,8 +47,8 @@ const mostrarFoto = computed(() => !!props.fotoUrl && !fallo.value)
   justify-content: center;
   overflow: hidden;
   border-radius: 50%;
-  background: rgba(145, 85, 253, 0.12);
-  color: #804bdf;
+  background: rgba(110, 94, 224, 0.12);
+  color: var(--ws-primario);
   font-weight: 700;
   line-height: 1;
 }

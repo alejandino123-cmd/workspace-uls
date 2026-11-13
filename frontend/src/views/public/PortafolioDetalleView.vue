@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import TecnologiaChip from '@/components/tecnologias/TecnologiaChip.vue'
+import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import ProgressBar from 'primevue/progressbar'
 import Message from 'primevue/message'
@@ -14,6 +15,17 @@ const props = defineProps<{ userId: string }>()
 const portafolio = ref<PortafolioPublico | null>(null)
 const cargando = ref(true)
 const error = ref('')
+
+// Enlaces profesionales del estudiante: solo los que registró
+const enlacesProfesionales = computed(() => {
+  const p = portafolio.value?.perfil
+  if (!p) return []
+  return [
+    p.github && { href: p.github, texto: 'GitHub', icono: 'pi pi-github' },
+    p.linkedin && { href: p.linkedin, texto: 'LinkedIn', icono: 'pi pi-linkedin' },
+    p.sitioWeb && { href: p.sitioWeb, texto: 'Sitio web', icono: 'pi pi-globe' },
+  ].filter(Boolean) as { href: string; texto: string; icono: string }[]
+})
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString('es', { month: 'long', year: 'numeric' })
@@ -75,6 +87,9 @@ watch(() => props.userId, cargar, { immediate: true })
               <i class="pi pi-clock"></i>
               {{ etiquetaDisponibilidad(portafolio.perfil.disponibilidad) }}
             </p>
+            <p v-if="portafolio.perfil.especialidad" class="especialidad">
+              <i class="pi pi-code" aria-hidden="true"></i> {{ portafolio.perfil.especialidad }}
+            </p>
           </div>
         </div>
 
@@ -86,10 +101,30 @@ watch(() => props.userId, cargar, { immediate: true })
           <ProgressBar :value="portafolio.perfil.porcentajeAvance" :show-value="false" style="height: 8px" />
         </div>
 
+        <p v-if="portafolio.perfil.biografia" class="biografia">{{ portafolio.perfil.biografia }}</p>
+
+        <Button
+          v-if="portafolio.perfil.cvUrl"
+          as="a"
+          :href="portafolio.perfil.cvUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          label="Descargar CV"
+          icon="pi pi-download"
+          outlined
+          class="descargar-cv"
+        />
+
+        <ul v-if="enlacesProfesionales.length" class="enlaces-profesionales" aria-label="Enlaces profesionales">
+          <li v-for="e in enlacesProfesionales" :key="e.href">
+            <a :href="e.href" target="_blank" rel="noopener noreferrer"><i :class="e.icono" aria-hidden="true"></i> {{ e.texto }}</a>
+          </li>
+        </ul>
+
         <div v-if="portafolio.perfil.habilidades.length" class="habilidades">
           <h2 class="sub">Habilidades</h2>
           <div class="chips">
-            <span v-for="h in portafolio.perfil.habilidades" :key="h" class="tag">{{ h }}</span>
+            <TecnologiaChip v-for="h in portafolio.perfil.habilidades" :key="h" :nombre="h" />
           </div>
         </div>
       </section>
@@ -108,10 +143,18 @@ watch(() => props.userId, cargar, { immediate: true })
             <p class="proyecto-desc">{{ p.descripcion }}</p>
 
             <div v-if="p.tecnologias.length" class="chips">
-              <span v-for="t in p.tecnologias" :key="t" class="tag">{{ t }}</span>
+              <TecnologiaChip v-for="t in p.tecnologias" :key="t" :nombre="t" tamano="pequeno" />
             </div>
 
             <div class="enlaces">
+              <Button
+                as="router-link"
+                :to="{ name: 'proyecto', params: { id: p.id } }"
+                label="Ver proyecto"
+                icon="pi pi-arrow-right"
+                icon-pos="right"
+                size="small"
+              />
               <Button
                 v-if="p.urlRepositorio"
                 as="a"
@@ -159,6 +202,7 @@ watch(() => props.userId, cargar, { immediate: true })
           <p class="vacio-texto">Los proyectos aparecen aquí cuando son validados y publicados.</p>
         </div>
       </section>
+
     </template>
   </div>
 </template>
@@ -175,18 +219,60 @@ watch(() => props.userId, cargar, { immediate: true })
   margin-bottom: 1rem;
 }
 
+.descargar-cv {
+  align-self: flex-start;
+}
+
+.especialidad {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.35rem 0 0;
+  color: var(--ws-primario);
+  font-weight: 600;
+}
+
+.biografia {
+  margin: 0;
+  line-height: 1.7;
+  color: var(--ws-texto);
+  white-space: pre-line;
+}
+
+.enlaces-profesionales {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.enlaces-profesionales a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ws-primario);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.enlaces-profesionales a:hover {
+  text-decoration: underline;
+}
+
 .estado {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   text-align: center;
   padding: 3rem 0;
 }
 
 /* ── Perfil ── */
 .perfil {
-  background: #fff;
-  border: 1px solid #e7e5ec;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(58, 53, 65, 0.1);
+  box-shadow: var(--ws-sombra);
   padding: 1.75rem;
   margin-bottom: 2rem;
   display: flex;
@@ -203,7 +289,7 @@ watch(() => props.userId, cargar, { immediate: true })
 .nombre {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0;
 }
 
@@ -211,7 +297,7 @@ watch(() => props.userId, cargar, { immediate: true })
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin: 0.2rem 0 0 0;
 }
 
@@ -219,18 +305,18 @@ watch(() => props.userId, cargar, { immediate: true })
   display: flex;
   justify-content: space-between;
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin-bottom: 0.4rem;
 }
 
 .avance-texto strong {
-  color: #1e293b;
+  color: var(--ws-texto);
 }
 
 .sub {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0 0 0.5rem 0;
 }
 
@@ -243,8 +329,8 @@ watch(() => props.userId, cargar, { immediate: true })
 .tag {
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--ws-fondo);
+  color: var(--ws-texto);
   font-size: 0.8rem;
   font-weight: 500;
 }
@@ -253,21 +339,21 @@ watch(() => props.userId, cargar, { immediate: true })
 .seccion {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0 0 1rem 0;
 }
 
 .proyectos {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 1.25rem;
 }
 
 .proyecto {
-  background: #fff;
-  border: 1px solid #e7e5ec;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(58, 53, 65, 0.1);
+  box-shadow: 0 2px 12px rgba(31, 28, 75, 0.16);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -284,7 +370,7 @@ watch(() => props.userId, cargar, { immediate: true })
 .proyecto-titulo {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0;
 }
 
@@ -295,15 +381,15 @@ watch(() => props.userId, cargar, { immediate: true })
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background: rgba(145, 85, 253, 0.12);
-  color: #804bdf;
+  background: rgba(110, 94, 224, 0.12);
+  color: var(--ws-primario);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .proyecto-desc {
   margin: 0;
-  color: #334155;
+  color: var(--ws-texto);
   line-height: 1.6;
   white-space: pre-line;
 }
@@ -317,26 +403,26 @@ watch(() => props.userId, cargar, { immediate: true })
 .proyecto-fecha {
   margin: auto 0 0 0;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
 }
 
 .vacio {
   text-align: center;
   padding: 2.5rem 1rem;
-  background: #fff;
-  border: 1px solid #e7e5ec;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
   border-radius: 12px;
 }
 
 .vacio-titulo {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0 0 0.3rem 0;
 }
 
 .vacio-texto {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin: 0;
 }
 </style>

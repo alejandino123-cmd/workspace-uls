@@ -47,9 +47,60 @@ export function subirFoto(buffer: Buffer, userId: number): Promise<{ url: string
   });
 }
 
+/** Sube la vista previa de un proyecto. Se recorta a 16:9 (1200x675) para las tarjetas. */
+export function subirImagenProyecto(buffer: Buffer, proyectoId: number): Promise<{ url: string; publicId: string }> {
+  configurar();
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        public_id: `workspace-uls/proyectos/proyecto-${proyectoId}-${Date.now()}`,
+        resource_type: "image",
+        allowed_formats: ["jpg", "png", "webp"],
+        transformation: [
+          { width: 1200, height: 675, crop: "fill", gravity: "auto" },
+          { quality: "auto" },
+        ],
+      },
+      (error, result) => {
+        if (error || !result) return reject(error ?? new Error("Cloudinary no devolvió resultado"));
+        resolve({ url: result.secure_url, publicId: result.public_id });
+      },
+    );
+    stream.end(buffer);
+  });
+}
+
 /** Borra una foto anterior. Si Cloudinary no está configurado, no hace nada. */
 export async function borrarFoto(publicId: string): Promise<void> {
   if (!cloudinaryConfigurado()) return;
   configurar();
   await cloudinary.uploader.destroy(publicId, { resource_type: "image", invalidate: true });
+}
+
+/** Sube el currículum (PDF). Se guarda como archivo "raw" para que Cloudinary no intente procesarlo como imagen. */
+export function subirCv(buffer: Buffer, userId: number): Promise<{ url: string; publicId: string }> {
+  configurar();
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        public_id: `workspace-uls/cv/usuario-${userId}-${Date.now()}.pdf`,
+        resource_type: "raw",
+        format: "pdf",
+      },
+      (error, result) => {
+        if (error || !result) return reject(error ?? new Error("Cloudinary no devolvió resultado"));
+        resolve({ url: result.secure_url, publicId: result.public_id });
+      },
+    );
+    stream.end(buffer);
+  });
+}
+
+/** Borra un currículum anterior. */
+export async function borrarCv(publicId: string): Promise<void> {
+  if (!cloudinaryConfigurado()) return;
+  configurar();
+  await cloudinary.uploader.destroy(publicId, { resource_type: "raw", invalidate: true });
 }

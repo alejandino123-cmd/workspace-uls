@@ -1,10 +1,56 @@
+/* Orden de capas: PrimeVue va antes que las utilidades de Tailwind para que Tailwind gane.
+   Debe ir antes del @import para fijar el orden. */
+@layer theme, base, primevue, components, utilities;
+
 @import 'tailwindcss';
 
-/* Tema claro global de Workspace ULS.
-   El fondo (slate-100) y el texto (slate-800) se definen aquí una sola vez;
-   las vistas no deberían repetirlos. */
+/* Paleta de Workspace ULS (solo modo claro: no existe modo oscuro en la plataforma).
+   Pale Indigo #BAB0EF · Soft Indigo #6E5EE0 · Soft Indigo #4127D5 · Rich Indigo #362882 · Deep Indigo #1F1C4B */
 :root {
+  --ws-indigo-palido: #bab0ef;
+  --ws-indigo-suave: #6e5ee0;
+  --ws-indigo-vivo: #4127d5;
+  --ws-indigo-rico: #362882;
+  --ws-indigo-profundo: #1f1c4b;
+
+  /* Neutros tintados hacia el índigo para que las superficies combinen con la paleta */
+  --ws-lienzo: #f6f5fd;
+  --ws-blanco: #ffffff;
+  --ws-bruma: #ece9fa;
+  --ws-linea: #d9d4f5;
+  --ws-texto-tenue: #5d5894;
+
+  --ws-fondo: var(--ws-lienzo);
+  --ws-superficie: var(--ws-blanco);
+  --ws-superficie-2: var(--ws-bruma);
+  --ws-primario: var(--ws-indigo-vivo);
+  --ws-secundario: var(--ws-indigo-suave);
+  --ws-exito: var(--ws-indigo-suave);
+  --ws-texto: var(--ws-indigo-profundo);
+  --ws-texto-suave: var(--ws-texto-tenue);
+  --ws-borde: var(--ws-linea);
+  --ws-sombra: 0 12px 32px -16px rgba(31, 28, 75, 0.22);
+  --ws-degradado: linear-gradient(135deg, #362882 0%, #4127d5 60%, #6e5ee0 100%);
+  --ws-degradado-suave: linear-gradient(160deg, var(--ws-blanco) 0%, var(--ws-bruma) 100%);
+  --ws-cuadricula: rgba(65, 39, 213, 0.07);
   color-scheme: light;
+}
+
+/* Clases de Tailwind basadas en la paleta: bg-superficie, text-texto, border-borde, etc. */
+@theme inline {
+  --color-fondo: var(--ws-fondo);
+  --color-superficie: var(--ws-superficie);
+  --color-superficie-2: var(--ws-superficie-2);
+  --color-primario: var(--ws-primario);
+  --color-secundario: var(--ws-secundario);
+  --color-exito: var(--ws-exito);
+  --color-texto: var(--ws-texto);
+  --color-texto-suave: var(--ws-texto-suave);
+  --color-borde: var(--ws-borde);
+  --color-azul-oscuro: var(--ws-indigo-profundo);
+  --color-azul-hielo: var(--ws-indigo-palido);
+  --color-azul: var(--ws-indigo-vivo);
+  --color-azul-claro: var(--ws-indigo-suave);
 }
 
 /* Reset básico + fondo global.
@@ -14,7 +60,9 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background-color: #f1f5f9; /* slate-100 */
+  background-color: var(--ws-fondo);
+  background-image: radial-gradient(1000px 600px at 85% -10%, rgba(186, 176, 239, 0.45), transparent 70%);
+  background-attachment: fixed;
 }
 
 #app {
@@ -24,6 +72,65 @@ body {
 }
 
 body {
-  color: #1e293b; /* slate-800 */
+  color: var(--ws-texto);
   font-family: inherit;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utilidades del rediseño público (reutilizables en cualquier vista) */
+.fondo-cuadricula {
+  background-image:
+    linear-gradient(var(--ws-cuadricula) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ws-cuadricula) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.texto-degradado {
+  background: var(--ws-degradado);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.sombra-tarjeta {
+  box-shadow: var(--ws-sombra);
+}
+
+/* Enfoque visible para teclado en todos los enlaces y botones */
+:focus-visible {
+  outline: 2px solid var(--ws-primario);
+  outline-offset: 2px;
+}
+
+/* Tablas administrativas (Validaciones y Estudiantes): cabecera discreta y filas con hover suave */
+.tabla-card .p-datatable-thead > tr > th {
+  background: var(--ws-superficie-2);
+  color: var(--ws-texto-suave);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ws-borde);
+}
+
+.tabla-card .p-datatable-tbody > tr {
+  transition: background-color 0.15s;
+}
+
+.tabla-card .p-datatable-tbody > tr:hover > td {
+  background: color-mix(in srgb, var(--ws-indigo-palido) 22%, transparent);
+}
+
+/* Identidad visual: botón principal con degradado índigo (sin afectar secundarios ni de texto) */
+.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-warn):not(.p-button-info) {
+  background: var(--ws-degradado);
+  border-color: transparent;
+  box-shadow: 0 8px 22px -12px rgba(65, 39, 213, 0.65);
+}
+
+/* Profundidad de tarjetas: superficie blanca con borde índigo suave */
+.tarjeta,
+.tabla-card {
+  background-color: var(--ws-superficie);
+  border-color: var(--ws-borde);
 }

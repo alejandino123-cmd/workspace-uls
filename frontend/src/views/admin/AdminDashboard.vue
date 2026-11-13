@@ -6,11 +6,13 @@ import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
+import ToggleSwitch from 'primevue/toggleswitch'
 import Message from 'primevue/message'
 import {
   evaluarProyecto,
   listarPendientes,
   listarValidados,
+  marcarDestacado,
   type ProyectoPendiente,
   type ProyectoValidado,
 } from '@/service/validaciones'
@@ -58,6 +60,17 @@ async function cargarValidados() {
     errorValidados.value = mensajeDeError(e, 'No se pudieron cargar los proyectos validados')
   } finally {
     cargandoValidados.value = false
+  }
+}
+
+// Marca o quita un proyecto como destacado en la portada de portafolios
+async function cambiarDestacado(p: ProyectoValidado, valor: boolean) {
+  errorValidados.value = ''
+  try {
+    await marcarDestacado(p.id, valor)
+    await cargarValidados()
+  } catch (e) {
+    errorValidados.value = mensajeDeError(e, 'No se pudo cambiar el destacado')
   }
 }
 
@@ -151,6 +164,16 @@ onMounted(cargar)
             </div>
             <div class="proy-meta">Carnet: {{ data.estudiante.carnet ?? 'sin registrar' }}</div>
             <div class="proy-meta">{{ data.estudiante.email }}</div>
+          </template>
+        </Column>
+
+        <Column header="Destacado">
+          <template #body="{ data }">
+            <ToggleSwitch
+              :model-value="data.destacado"
+              :aria-label="`Destacar ${data.titulo}`"
+              @update:model-value="(v: boolean) => cambiarDestacado(data, v)"
+            />
           </template>
         </Column>
 
@@ -300,12 +323,12 @@ onMounted(cargar)
 .page-title {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0 0 0.25rem 0;
 }
 
 .page-lead {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin: 0;
 }
 
@@ -320,21 +343,21 @@ onMounted(cargar)
 }
 
 .tabla-card {
-  background: #fff;
-  border: 1px solid #e7e5ec;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(58, 53, 65, 0.1);
+  box-shadow: 0 2px 12px rgba(31, 28, 75, 0.16);
   overflow-x: auto;
 }
 
 .proy-titulo {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--ws-texto);
 }
 
 .proy-meta {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin-top: 0.15rem;
 }
 
@@ -350,8 +373,8 @@ onMounted(cargar)
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: rgba(145, 85, 253, 0.12);
-  color: #9155fd;
+  background: rgba(110, 94, 224, 0.12);
+  color: var(--ws-primario);
   font-size: 1.5rem;
   margin-bottom: 1rem;
 }
@@ -359,12 +382,12 @@ onMounted(cargar)
 .vacio-titulo {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0 0 0.3rem 0;
 }
 
 .vacio-texto {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin: 0;
 }
 
@@ -378,43 +401,43 @@ onMounted(cargar)
 .rev-titulo {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0;
 }
 
 .rev-autor {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 0.75rem;
   margin: 0;
   padding: 0.85rem 1rem;
-  background: #f8fafc;
-  border: 1px solid #e7e5ec;
+  background: var(--ws-fondo);
+  border: 1px solid var(--ws-borde);
   border-radius: 8px;
 }
 
 .rev-autor dt {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
 }
 
 .rev-autor dd {
   margin: 0.1rem 0 0 0;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--ws-texto);
   overflow-wrap: anywhere;
 }
 
 .rev-sub {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0.5rem 0 0 0;
 }
 
 .rev-texto {
   margin: 0;
-  color: #334155;
+  color: var(--ws-texto);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -431,11 +454,11 @@ onMounted(cargar)
 }
 
 .rev-enlaces a {
-  color: #804bdf;
+  color: var(--ws-primario);
 }
 
 .rev-sin {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   list-style: none;
   margin-left: -1.1rem;
 }
@@ -450,10 +473,10 @@ onMounted(cargar)
 .campo label {
   font-weight: 600;
   font-size: 0.9rem;
-  color: #1e293b;
+  color: var(--ws-texto);
 }
 
 .campo small {
-  color: #64748b;
+  color: var(--ws-texto-suave);
 }
 </style>

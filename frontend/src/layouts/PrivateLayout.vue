@@ -28,8 +28,9 @@ onMounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f1f5f9; /* slate-100, igual que Login, Registro y PublicLayout */
-  color: #1e293b; /* slate-800 */
+  background-color: var(--ws-fondo);
+  background-image: radial-gradient(900px 500px at 80% -5%, rgba(65, 39, 213, 0.14), transparent 70%);
+  color: var(--ws-texto); /* slate-800 */
 }
 
 .private-content {

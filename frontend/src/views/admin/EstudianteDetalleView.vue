@@ -193,35 +193,35 @@ watch(() => route.params.id, cargar)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(145, 85, 253, 0.12);
-  color: #9155fd;
+  background: rgba(110, 94, 224, 0.12);
+  color: var(--ws-primario);
   font-size: 2rem;
 }
 
 .nombre {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0 0 0.25rem 0;
 }
 
 .meta {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin: 0.1rem 0;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
 .tarjeta {
-  background: #fff;
-  border: 1px solid #e7e5ec;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(58, 53, 65, 0.1);
+  box-shadow: 0 2px 12px rgba(31, 28, 75, 0.16);
   padding: 1.1rem 1.2rem;
   margin-bottom: 1rem;
 }
@@ -229,21 +229,21 @@ watch(() => route.params.id, cargar)
 .titulo-seccion {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 0 0 0.75rem 0;
 }
 
 .subtitulo {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
   margin: 1rem 0 0.4rem 0;
 }
 
 .avance {
   display: flex;
   justify-content: space-between;
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin-bottom: 0.35rem;
 }
 
@@ -253,13 +253,13 @@ watch(() => route.params.id, cargar)
 
 .datos dt {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
 }
 
 .datos dd {
   margin: 0.1rem 0 0 0;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--ws-texto);
 }
 
 .etiquetas {
@@ -270,14 +270,14 @@ watch(() => route.params.id, cargar)
 
 .conteo {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(110px, 100%), 1fr));
   gap: 0.5rem;
 }
 
 .cifra {
   text-align: center;
   padding: 0.75rem 0.25rem;
-  background: #f8fafc;
+  background: var(--ws-fondo);
   border-radius: 8px;
 }
 
@@ -285,28 +285,28 @@ watch(() => route.params.id, cargar)
   display: block;
   font-size: 1.4rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
 }
 
 .cifra-texto {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
 }
 
 .texto {
-  color: #334155;
+  color: var(--ws-texto);
   line-height: 1.5;
   white-space: pre-wrap;
 }
 
 .proy-titulo {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--ws-texto);
 }
 
 .proy-meta {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin-top: 0.15rem;
 }
 
@@ -317,11 +317,11 @@ watch(() => route.params.id, cargar)
 }
 
 .enlaces a {
-  color: #804bdf;
+  color: var(--ws-primario);
 }
 
 .vacio-texto {
-  color: #64748b;
+  color: var(--ws-texto-suave);
   margin: 0;
 }
 </style>

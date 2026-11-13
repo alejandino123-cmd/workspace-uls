@@ -8,7 +8,8 @@ const authStore = useAuthStore()
 
 function salir() {
   authStore.logout()
-  router.push('/login')
+  // Después de cerrar sesión, vuelve a la vista pública
+  router.push('/')
 }
 </script>
 

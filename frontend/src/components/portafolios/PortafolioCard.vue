@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TecnologiaChip from '@/components/tecnologias/TecnologiaChip.vue'
 import { RouterLink } from 'vue-router'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
 import { etiquetaDisponibilidad } from '@/service/perfil'
@@ -31,7 +32,7 @@ defineProps<{
     </ul>
 
     <div v-if="estudiante.habilidades.length" class="chips">
-      <span v-for="h in estudiante.habilidades.slice(0, 4)" :key="h" class="tag">{{ h }}</span>
+      <TecnologiaChip v-for="h in estudiante.habilidades.slice(0, 4)" :key="h" :nombre="h" tamano="pequeno" />
       <span v-if="estudiante.habilidades.length > 4" class="tag tag-mas">
         +{{ estudiante.habilidades.length - 4 }}
       </span>
@@ -41,9 +42,9 @@ defineProps<{
       <span class="pill">
         <i class="pi pi-check-circle"></i>
         {{ estudiante.totalProyectos }}
-        {{ estudiante.totalProyectos === 1 ? 'proyecto validado' : 'proyectos validados' }}
+        {{ estudiante.totalProyectos === 1 ? 'proyecto publicado' : 'proyectos publicados' }}
       </span>
-      <span class="avance">Avance {{ estudiante.porcentajeAvance }} %</span>
+      <span class="ver">Ver portafolio <i class="pi pi-arrow-right" aria-hidden="true"></i></span>
     </div>
   </RouterLink>
 </template>
@@ -54,24 +55,25 @@ defineProps<{
   flex-direction: column;
   gap: 1rem;
   padding: 1.25rem;
-  background: #fff;
-  border: 1px solid #e7e5ec;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(58, 53, 65, 0.1);
-  color: #1e293b;
+  box-shadow: var(--ws-sombra);
+  color: var(--ws-texto);
   text-decoration: none;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .card:hover {
-  border-color: #c4a6ff;
-  box-shadow: 0 4px 16px rgba(145, 85, 253, 0.18);
+  transform: translateY(-3px);
+  border-color: var(--ws-indigo-suave);
 }
 
 .card:focus-visible {
-  outline: 2px solid #9155fd;
+  outline: 2px solid var(--ws-primario);
   outline-offset: 2px;
 }
 
@@ -89,12 +91,12 @@ defineProps<{
 
 .nombre {
   font-weight: 700;
-  color: #1e293b;
+  color: var(--ws-texto);
 }
 
 .sub {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
 }
 
 .proyectos {
@@ -111,11 +113,11 @@ defineProps<{
   align-items: center;
   gap: 0.5rem;
   font-size: 0.92rem;
-  color: #334155;
+  color: var(--ws-texto);
 }
 
 .proyectos i {
-  color: #9155fd;
+  color: var(--ws-primario);
   font-size: 0.95rem;
 }
 
@@ -133,22 +135,23 @@ defineProps<{
 
 .tag {
   padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #334155;
+  border-radius: 6px;
+  background: var(--ws-superficie-2);
+  border: 1px solid var(--ws-borde);
+  color: var(--ws-texto);
   font-size: 0.8rem;
   font-weight: 500;
 }
 
 .tag-mas {
   background: transparent;
-  color: #64748b;
+  color: var(--ws-texto-suave);
 }
 
 .foot {
   margin-top: auto;
   padding-top: 0.85rem;
-  border-top: 1px solid #e7e5ec;
+  border-top: 1px solid var(--ws-borde);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -162,14 +165,23 @@ defineProps<{
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background: rgba(145, 85, 253, 0.12);
-  color: #804bdf;
+  background: var(--ws-superficie-2);
+  color: var(--ws-indigo-rico);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .avance {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--ws-texto-suave);
+}
+
+.ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ws-indigo-suave);
 }
 </style>

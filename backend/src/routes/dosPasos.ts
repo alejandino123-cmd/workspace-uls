@@ -271,3 +271,12 @@ dosPasosRouter.post("/verificar", limitarPorTokenTemporal, async (req, res) => {
   const user = { id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol };
   res.json({ user, token: signToken({ ...user, tokenVersion: usuario.tokenVersion }) });
 });
+
+// Estado de la autenticación en dos pasos del usuario autenticado (para la pantalla de seguridad)
+dosPasosRouter.get("/estado", requireAuth, async (req: AuthRequest, res) => {
+  const usuario = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { totpActivo: true },
+  });
+  res.json({ activo: Boolean(usuario?.totpActivo) });
+});
