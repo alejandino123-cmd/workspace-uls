@@ -153,8 +153,17 @@ const anio = (iso: string) => new Date(iso).getFullYear()
               :disabled="subiendoCv"
               @click="eliminarCv"
             />
-            <a v-if="perfil.github" :href="perfil.github" target="_blank" rel="noopener noreferrer" class="enlace">GitHub</a>
-            <a :href="`mailto:${cuenta.email}`" class="enlace">Contacto</a>
+            <Button
+              v-if="perfil.github"
+              as="a"
+              :href="perfil.github"
+              target="_blank"
+              rel="noopener noreferrer"
+              label="GitHub"
+              icon="pi pi-github"
+              outlined
+            />
+            <Button as="a" :href="`mailto:${cuenta.email}`" label="Contacto" icon="pi pi-envelope" outlined />
           </div>
         </div>
       </header>
@@ -302,15 +311,9 @@ const anio = (iso: string) => new Date(iso).getFullYear()
   gap: 0.75rem;
 }
 
-.enlace {
-  color: var(--ws-texto);
-  font-weight: 600;
-  text-decoration: none;
-  padding: 0.5rem 0.4rem;
-}
-
-.enlace:hover {
-  color: var(--ws-primario);
+/* Los botones de la fila no se parten en dos líneas */
+.acciones :deep(.p-button) {
+  white-space: nowrap;
 }
 
 /* Tarjetas de sección */

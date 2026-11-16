@@ -23,8 +23,8 @@ const WorkspacePreset = definePreset(Aura, {
       xs: '4px',
       sm: '6px',
       md: '8px',
-      lg: '10px',
-      xl: '12px'
+      lg: '8px',
+      xl: '8px'
     }
   },
   semantic: {

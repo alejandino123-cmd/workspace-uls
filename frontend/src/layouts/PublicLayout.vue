@@ -23,10 +23,7 @@ import PiePublico from '@/components/public/PiePublico.vue'
   min-height: 100vh;
   display: grid;
   grid-template-columns: 17rem minmax(0, 1fr);
-  /* Fondo oscuro con un resplandor azul sutil arriba; sin cuadrícula en todo el sitio */
-  background:
-    radial-gradient(900px 500px at 80% -5%, rgba(25, 81, 252, 0.16), transparent 70%),
-    var(--ws-fondo);
+  background: var(--ws-fondo);
   color: var(--ws-texto);
 }
 

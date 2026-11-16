@@ -11,6 +11,7 @@ export interface PerfilPublicoResumen {
   disponibilidad: Disponibilidad | null
   habilidades: string[]
   fotoUrl: string | null
+  especialidad: string | null
   totalProyectos: number
 }
 

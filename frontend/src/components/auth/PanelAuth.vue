@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import heroWorkspace from '@/assets/hero-tecnologia.png'
+import LogoWorkspace from '@/components/layout/LogoWorkspace.vue'
+import heroEscritorio from '@/assets/escritorio-hero.jpg'
 </script>
 
 <template>
   <aside class="panel">
-    <img :src="heroWorkspace" alt="" aria-hidden="true" class="imagen" />
+    <img :src="heroEscritorio" alt="" aria-hidden="true" class="imagen" />
     <div class="velo"></div>
-    <div class="texto">
-      <span class="etiqueta">Portafolio académico</span>
-      <h2 class="titulo">El talento se construye creando.</h2>
-      <p class="lead">Workspace ULS reúne los proyectos de los estudiantes de Ciencias de la Computación de la ULS.</p>
+    <div class="contenido">
+      <LogoWorkspace size="4.5rem" />
+      <h2 class="titulo">Muestra tus proyectos con el respaldo de la ULS.</h2>
+      <p class="lead">
+        Crea tu portafolio, envía tus proyectos a la coordinación para que los valide y compártelos con
+        empresas y visitantes.
+      </p>
     </div>
   </aside>
 </template>
@@ -19,8 +23,9 @@ import heroWorkspace from '@/assets/hero-tecnologia.png'
   position: relative;
   display: none;
   overflow: hidden;
-  background: var(--ws-azul-oscuro);
-  color: #fff;
+  background: var(--ws-fondo);
+  border-right: 1px solid var(--ws-borde);
+  color: var(--ws-texto);
 }
 
 .imagen {
@@ -31,44 +36,36 @@ import heroWorkspace from '@/assets/hero-tecnologia.png'
   object-fit: cover;
 }
 
-/* Velo azul para que el texto se lea sobre la ilustración */
+/* Capa plana y oscura para que el texto se lea sobre la foto */
 .velo {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(3, 25, 91, 0.15) 0%, rgba(3, 25, 91, 0.85) 100%);
+  background: rgba(10, 15, 30, 0.78);
 }
 
-.texto {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.contenido {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.5rem;
+  max-width: 32rem;
+  margin: 0 auto;
   padding: 3rem;
 }
 
-.etiqueta {
-  display: inline-block;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 .titulo {
-  margin: 1rem 0 0.5rem;
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
-  font-weight: 800;
-  line-height: 1.15;
+  margin: 0;
+  font-size: clamp(1.8rem, 2.6vw, 2.3rem);
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .lead {
   margin: 0;
-  max-width: 28rem;
-  line-height: 1.6;
-  color: var(--ws-azul-hielo);
+  line-height: 1.65;
+  color: var(--ws-texto-suave);
 }
 
 @media (min-width: 1024px) {

@@ -27,7 +27,7 @@ async function handleRegister() {
   error.value = ''
 
   if (!nombre.value || !email.value || !carnet.value || !password.value || !confirmar.value) {
-    error.value = 'Completá todos los campos'
+    error.value = 'Completa todos los campos'
     return
   }
   if (!carnetValido.test(carnet.value.trim())) {
@@ -68,13 +68,13 @@ async function handleRegister() {
   <PanelAuth />
   <main class="flex items-center justify-center overflow-y-auto p-6">
     <div class="w-full max-w-[480px] my-auto">
-      <div class="w-full rounded-2xl bg-superficie p-8 md:p-10 sombra-tarjeta ring-1 ring-borde">
+      <div class="w-full rounded-lg bg-superficie p-8 md:p-10 sombra-tarjeta ring-1 ring-borde">
         
         <!-- Encabezado con Logo SVG -->
         <div class="mb-6 text-center">
           <div class="mx-auto mb-6 flex justify-center"><LogoWorkspace size="3.5rem" /></div>
           <h1 class="m-0 mb-1 text-2xl font-semibold text-texto">Crear cuenta</h1>
-          <p class="m-0 text-sm text-texto-suave">Registrate para armar y mostrar tu portafolio</p>
+          <p class="m-0 text-sm text-texto-suave">Regístrate para armar y mostrar tu portafolio</p>
         </div>
 
         <!-- Formulario de Registro -->
@@ -152,8 +152,8 @@ async function handleRegister() {
           />
 
           <p class="mt-2 text-center text-sm text-texto-suave">
-            ¿Ya tenés cuenta?
-            <RouterLink to="/login" class="font-semibold text-primario hover:underline">Iniciá sesión</RouterLink>
+            ¿Ya tienes cuenta?
+            <RouterLink to="/login" class="font-semibold text-primario hover:underline">Inicia sesión</RouterLink>
           </p>
         </form>
 

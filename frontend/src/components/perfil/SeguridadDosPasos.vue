@@ -48,7 +48,7 @@ async function iniciarConfiguracion() {
 async function confirmarActivacion() {
   error.value = ''
   if (!codigo.value.trim()) {
-    error.value = 'Escribí el código que muestra tu aplicación'
+    error.value = 'Escribe el código que muestra tu aplicación'
     return
   }
   enviando.value = true
@@ -67,7 +67,7 @@ async function confirmarActivacion() {
 async function confirmarDesactivacion() {
   error.value = ''
   if (!codigo.value.trim()) {
-    error.value = 'Escribí el código que muestra tu aplicación'
+    error.value = 'Escribe el código que muestra tu aplicación'
     return
   }
   enviando.value = true

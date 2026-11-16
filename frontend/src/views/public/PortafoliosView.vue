@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import TecnologiaChip from '@/components/tecnologias/TecnologiaChip.vue'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
@@ -8,10 +7,9 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Message from 'primevue/message'
 import Paginator from 'primevue/paginator'
-import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
 import PortafolioCard from '@/components/portafolios/PortafolioCard.vue'
 import type { FiltrosPerfiles } from '@/service/perfiles'
-import { useDestacados, usePortafolios } from '@/queries/perfiles'
+import { usePortafolios } from '@/queries/perfiles'
 
 const POR_PAGINA = 9
 
@@ -40,7 +38,6 @@ const { data, isPending, isError, error, refetch } = usePortafolios(filtros)
 const estudiantes = computed(() => data.value?.estudiantes ?? [])
 const total = computed(() => data.value?.total ?? 0)
 
-const { data: destacados } = useDestacados()
 
 const hayFiltros = computed(() => !!textoConsulta.value)
 
@@ -81,23 +78,6 @@ onBeforeUnmount(() => clearTimeout(temporizador))
         <Button v-if="hayFiltros" label="Limpiar" icon="pi pi-times" text @click="limpiarFiltros" />
       </div>
     </header>
-
-    <section v-if="destacados?.length" class="destacados" aria-labelledby="destacados-titulo">
-      <h2 id="destacados-titulo" class="subtitulo">Proyectos destacados</h2>
-      <div class="grid-destacados">
-        <article v-for="p in destacados" :key="p.id" class="destacado">
-          <h3 class="destacado-titulo">{{ p.titulo }}</h3>
-          <p class="destacado-texto">{{ p.descripcion }}</p>
-          <div class="chips">
-            <TecnologiaChip v-for="t in p.tecnologias.slice(0, 3)" :key="t" :nombre="t" tamano="pequeno" />
-          </div>
-          <RouterLink :to="{ name: 'portafolio', params: { userId: p.estudiante.id } }" class="autor">
-            <AvatarEstudiante :nombre="p.estudiante.nombre" :foto-url="p.estudiante.fotoUrl" tamano="32px" />
-            <span>{{ p.estudiante.nombre }}</span>
-          </RouterLink>
-        </article>
-      </div>
-    </section>
 
     <Message v-if="isError" severity="error" :closable="false" class="aviso">
       {{ error?.message ?? 'No se pudieron cargar los portafolios' }}
@@ -226,75 +206,6 @@ onBeforeUnmount(() => clearTimeout(temporizador))
   color: var(--ws-texto-suave);
   margin: 0;
 }
-</style>
-
-/* Destacados y filtros */
-.destacados {
-  margin-bottom: 2rem;
-}
-
-.subtitulo {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--ws-texto);
-  margin: 0 0 0.75rem 0;
-}
-
-.grid-destacados {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-  gap: 1rem;
-}
-
-.destacado {
-  background: var(--ws-superficie);
-  border: 1px solid var(--ws-borde);
-  border-top: 3px solid var(--ws-primario);
-  border-radius: 12px;
-  padding: 1rem 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.destacado-titulo {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ws-texto);
-  margin: 0;
-}
-
-.destacado-texto {
-  font-size: 0.875rem;
-  color: var(--ws-texto-suave);
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.chip {
-  background: var(--ws-fondo);
-  border: 1px solid var(--ws-borde);
-  color: var(--ws-texto);
-}
-
-.autor {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: auto;
-  color: var(--ws-texto);
-  text-decoration: none;
-  font-weight: 600;
-}
 
 /* Buscador en la cabecera, a la derecha del título */
 .filtros {
@@ -312,3 +223,4 @@ onBeforeUnmount(() => clearTimeout(temporizador))
 .reintentar {
   margin-left: 0.5rem;
 }
+</style>

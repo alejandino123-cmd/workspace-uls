@@ -24,7 +24,7 @@ import Button from 'primevue/button'
           <!-- Encabezado 404 -->
           <span class="error-code">404</span>
           <h1 class="error-title">Página no encontrada</h1>
-          <p class="error-desc">El recurso al que intentás acceder no está disponible o cambió de lugar.</p>
+          <p class="error-desc">El recurso al que intentas acceder no está disponible o cambió de lugar.</p>
 
           <!-- Enlaces de ayuda estilo lista -->
           <div class="links-container">
@@ -34,7 +34,7 @@ import Button from 'primevue/button'
               </span>
               <div class="nav-text">
                 <span class="nav-title">Inicio de Sesión</span>
-                <span class="nav-sub">Ingresá a tu cuenta de Workspace ULS</span>
+                <span class="nav-sub">Ingresa a tu cuenta de Workspace ULS</span>
               </div>
             </RouterLink>
 
@@ -44,7 +44,7 @@ import Button from 'primevue/button'
               </span>
               <div class="nav-text">
                 <span class="nav-title">Crear Cuenta</span>
-                <span class="nav-sub">Registrate y mostrá tu portafolio</span>
+                <span class="nav-sub">Regístrate y muestra tu portafolio</span>
               </div>
             </RouterLink>
           </div>

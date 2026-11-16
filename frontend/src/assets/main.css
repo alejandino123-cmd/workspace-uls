@@ -31,9 +31,11 @@
   --ws-texto: #ffffff;
   --ws-texto-suave: var(--ws-pale-slate);
   --ws-borde: rgba(122, 152, 255, 0.16);
-  --ws-sombra: 0 14px 34px -18px rgba(0, 0, 0, 0.75);
-  --ws-degradado: linear-gradient(135deg, #0b2cb1 0%, #1951fc 100%);
-  --ws-degradado-suave: linear-gradient(160deg, var(--ws-superficie) 0%, var(--ws-fondo) 100%);
+  --ws-fuente-titulo: 'Sora', system-ui, sans-serif;
+  --ws-sombra: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Sin degradados ni resplandores: colores planos */
+  --ws-degradado: var(--ws-azul);
+  --ws-degradado-suave: var(--ws-superficie);
   --ws-cuadricula: rgba(55, 129, 252, 0.08);
   color-scheme: dark;
 }
@@ -63,10 +65,6 @@ body {
   padding: 0;
   min-height: 100%;
   background-color: var(--ws-fondo);
-  background-image:
-    radial-gradient(1000px 600px at 85% -10%, rgba(25, 81, 252, 0.2), transparent 70%),
-    radial-gradient(800px 500px at -5% 105%, rgba(11, 44, 177, 0.18), transparent 70%);
-  background-attachment: fixed;
 }
 
 #app {
@@ -90,10 +88,7 @@ body {
 }
 
 .texto-degradado {
-  background: linear-gradient(90deg, #1951fc 0%, #3781fc 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--ws-azul-claro);
 }
 
 .sombra-tarjeta {
@@ -126,13 +121,6 @@ body {
 
 .tabla-card .p-datatable-tbody > tr:hover > td {
   background: rgba(25, 81, 252, 0.08);
-}
-
-/* Botón principal: azul eléctrico con brillo suave (sin afectar secundarios ni de texto) */
-.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-warn):not(.p-button-info) {
-  background: linear-gradient(180deg, #2a62ff 0%, #1951fc 100%);
-  border-color: transparent;
-  box-shadow: 0 8px 22px -10px rgba(25, 81, 252, 0.85);
 }
 
 /* Botones con contorno: borde azul tenue, como los botones secundarios de las maquetas */

@@ -29,7 +29,7 @@ async function handleLogin() {
   error.value = ''
 
   if (!email.value || !password.value) {
-    error.value = 'Completá todos los campos'
+    error.value = 'Completa todos los campos'
     return
   }
 
@@ -59,7 +59,7 @@ async function handleLogin() {
 async function handleCodigo() {
   error.value = ''
   if (!codigo.value.trim() || !tokenTemporal.value) {
-    error.value = 'Escribí el código de tu aplicación'
+    error.value = 'Escribe el código de tu aplicación'
     return
   }
 
@@ -87,13 +87,13 @@ async function handleCodigo() {
   <PanelAuth />
   <main class="flex items-center justify-center overflow-y-auto p-6">
     <div class="w-full max-w-[420px]">
-      <div class="w-full rounded-2xl bg-superficie p-10 sombra-tarjeta ring-1 ring-borde">
+      <div class="w-full rounded-lg bg-superficie p-10 sombra-tarjeta ring-1 ring-borde">
 
         <!-- Encabezado con Logo SVG -->
         <div class="mb-8 text-center">
           <div class="mx-auto mb-6 flex justify-center"><LogoWorkspace size="3.5rem" /></div>
           <h1 class="m-0 mb-2 text-2xl font-bold text-texto">¡Bienvenidos a Workspace ULS!</h1>
-          <p class="m-0 text-sm text-texto-suave">Iniciá sesión para crear tu portafolio</p>
+          <p class="m-0 text-sm text-texto-suave">Inicia sesión para crear tu portafolio</p>
         </div>
 
         <!-- Formulario de Login -->
@@ -143,8 +143,8 @@ async function handleCodigo() {
           />
 
           <p class="mt-2 text-center text-sm text-texto-suave">
-            ¿No tenés cuenta?
-            <RouterLink to="/register" class="font-semibold text-primario hover:underline">Registrate</RouterLink>
+            ¿No tienes cuenta?
+            <RouterLink to="/register" class="font-semibold text-primario hover:underline">Regístrate</RouterLink>
           </p>
         </form>
 
@@ -153,7 +153,7 @@ async function handleCodigo() {
           <Message v-if="error" severity="error" size="small">{{ error }}</Message>
 
           <p class="m-0 text-sm text-texto-suave">
-            Abrí tu aplicación de autenticación (por ejemplo, Google Authenticator) y escribí el código de 6 dígitos.
+            Abre tu aplicación de autenticación (por ejemplo, Google Authenticator) y escribe el código de 6 dígitos.
           </p>
 
           <FloatLabel variant="on">

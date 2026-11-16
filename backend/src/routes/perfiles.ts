@@ -95,7 +95,8 @@ perfilesRouter.get("/", async (req, res) => {
         perfil: {
           
           select: {
-            fotoUrl:true,
+            fotoUrl: true,
+            especialidad: true,
             porcentajeAvance: true,
             disponibilidad: true,
             habilidades: true,
@@ -114,6 +115,7 @@ perfilesRouter.get("/", async (req, res) => {
       id: u.id,
       nombre: u.nombre,
       fotoUrl: perfil?.fotoUrl ?? null,
+      especialidad: perfil?.especialidad ?? null,
       porcentajeAvance: perfil?.porcentajeAvance ?? 0,
       disponibilidad: perfil?.disponibilidad ?? null,
       habilidades: perfil?.habilidades ?? [],

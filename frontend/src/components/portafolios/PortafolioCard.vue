@@ -9,6 +9,8 @@ defineProps<{
   estudiante: PerfilPublicoResumen
   // Vista previa opcional: se muestran los 2 primeros proyectos
   proyectos?: ProyectoPublico[]
+  // Versión corta (portada): solo foto, nombre y especialidad
+  compacta?: boolean
 }>()
 </script>
 
@@ -18,27 +20,28 @@ defineProps<{
       <AvatarEstudiante :nombre="estudiante.nombre" :foto-url="estudiante.fotoUrl" tamano="48px" />
       <div class="quien">
         <span class="nombre">{{ estudiante.nombre }}</span>
-        <span v-if="estudiante.disponibilidad" class="sub">
+        <span v-if="estudiante.especialidad" class="sub">{{ estudiante.especialidad }}</span>
+        <span v-else-if="estudiante.disponibilidad" class="sub">
           {{ etiquetaDisponibilidad(estudiante.disponibilidad) }}
         </span>
       </div>
     </div>
 
-    <ul v-if="proyectos?.length" class="proyectos">
+    <ul v-if="!compacta && proyectos?.length" class="proyectos">
       <li v-for="p in proyectos.slice(0, 2)" :key="p.id">
         <i class="pi pi-folder"></i>
         <span>{{ p.titulo }}</span>
       </li>
     </ul>
 
-    <div v-if="estudiante.habilidades.length" class="chips">
+    <div v-if="!compacta && estudiante.habilidades.length" class="chips">
       <TecnologiaChip v-for="h in estudiante.habilidades.slice(0, 4)" :key="h" :nombre="h" tamano="pequeno" />
       <span v-if="estudiante.habilidades.length > 4" class="tag tag-mas">
         +{{ estudiante.habilidades.length - 4 }}
       </span>
     </div>
 
-    <div class="foot">
+    <div v-if="!compacta" class="foot">
       <span class="pill">
         <i class="pi pi-check-circle"></i>
         {{ estudiante.totalProyectos }}
@@ -57,18 +60,13 @@ defineProps<{
   padding: 1.25rem;
   background: var(--ws-superficie);
   border: 1px solid var(--ws-borde);
-  border-radius: 12px;
-  box-shadow: var(--ws-sombra);
+  border-radius: 8px;
   color: var(--ws-texto);
   text-decoration: none;
-  transition:
-    border-color 0.2s,
-    transform 0.2s,
-    box-shadow 0.2s;
+  transition: border-color 0.15s;
 }
 
 .card:hover {
-  transform: translateY(-3px);
   border-color: var(--ws-azul-claro);
 }
 
@@ -90,7 +88,7 @@ defineProps<{
 }
 
 .nombre {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--ws-texto);
 }
 
@@ -164,7 +162,7 @@ defineProps<{
   align-items: center;
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--ws-superficie-2);
   color: var(--ws-azul-hielo);
   font-size: 0.8rem;
