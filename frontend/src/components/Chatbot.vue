@@ -1,25 +1,71 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue';
+import { storeToRefs } from 'pinia';
+import { RouterLink } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import { chatService } from '@/service/chatBot';
+import { useChatStore, type ChatMessage } from '@/stores/chat';
+import type { TarjetaEstudiante, TarjetaProyecto } from '@/service/chatBot';
 
-interface ChatMessage {
-  role: 'user' | 'bot';
-  text: string;
+// El estado (mensajes, abierto, cargando) vive en el store para que no se pierda al navegar
+const chat = useChatStore();
+const { isOpen, loading, messages } = storeToRefs(chat);
+
+// ---- Tarjetas en el lugar donde se menciona cada estudiante/proyecto ----
+const normalizar = (t: string) =>
+  t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Nombre completo o, si el modelo lo acortó, sus dos primeras palabras
+const menciona = (textoNormalizado: string, nombre: string) => {
+  const completo = normalizar(nombre);
+  const corto = completo.split(/\s+/).slice(0, 2).join(' ');
+  return textoNormalizado.includes(completo) || textoNormalizado.includes(corto);
+};
+
+interface Segmento {
+  texto: string;
+  estudiantes: TarjetaEstudiante[];
+  proyectos: TarjetaProyecto[];
 }
 
-const isOpen = ref(false);
-const input = ref('');
-const loading = ref(false);
-const messagesEl = ref<HTMLElement | null>(null);
+// Divide la respuesta en párrafos y pone la tarjeta justo después del párrafo que la menciona.
+// Los párrafos sin tarjeta se juntan en una sola burbuja.
+const segmentos = (m: ChatMessage): Segmento[] => {
+  const t = m.tarjetas;
+  const parrafos = m.text.split(/\n+/).map((p) => p.trim()).filter(Boolean);
+  if (m.role !== 'bot' || !t || !parrafos.length) {
+    return [{ texto: m.text, estudiantes: [], proyectos: [] }];
+  }
 
-const messages = ref<ChatMessage[]>([
-  {
-    role: 'bot',
-    text: 'Hola, soy el asistente de Workspace ULS. Pregúntame por estudiantes, carreras o habilidades.',
-  },
-]);
+  const usadosE = new Set<number>();
+  const usadosP = new Set<number>();
+  const salida: Segmento[] = [];
+  let acumulado: string[] = [];
+
+  for (const p of parrafos) {
+    const n = normalizar(p);
+    const estudiantes = t.estudiantes.filter((e) => !usadosE.has(e.id) && menciona(n, e.nombre));
+    const proyectos = t.proyectos.filter((x) => !usadosP.has(x.id) && n.includes(normalizar(x.titulo)));
+    acumulado.push(p);
+    if (estudiantes.length || proyectos.length) {
+      estudiantes.forEach((e) => usadosE.add(e.id));
+      proyectos.forEach((x) => usadosP.add(x.id));
+      salida.push({ texto: acumulado.join('\n\n'), estudiantes, proyectos });
+      acumulado = [];
+    }
+  }
+
+  // Lo que no se ubicó en ningún párrafo va al final
+  const estudiantes = t.estudiantes.filter((e) => !usadosE.has(e.id));
+  const proyectos = t.proyectos.filter((x) => !usadosP.has(x.id));
+  if (acumulado.length || estudiantes.length || proyectos.length) {
+    salida.push({ texto: acumulado.join('\n\n'), estudiantes, proyectos });
+  }
+  return salida;
+};
+
+const input = ref('');
+const messagesEl = ref<HTMLElement | null>(null);
 
 const scrollToBottom = async () => {
   await nextTick();
@@ -32,29 +78,20 @@ const send = async () => {
   const text = input.value.trim();
   if (!text || loading.value) return;
 
-  messages.value.push({ role: 'user', text });
   input.value = '';
-  loading.value = true;
+  const pendiente = chat.send(text);
   scrollToBottom();
-
-  try {
-    const reply = await chatService.ask(text);
-    messages.value.push({ role: 'bot', text: reply });
-  } catch {
-    messages.value.push({
-      role: 'bot',
-      text: 'No pude responder en este momento. Intenta de nuevo en unos segundos.',
-    });
-  } finally {
-    loading.value = false;
-    scrollToBottom();
-  }
+  await pendiente;
+  scrollToBottom();
 };
 
 const toggle = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value) scrollToBottom();
 };
+
+// Al volver a montarse (p. ej. recarga de componente) con el chat abierto, baja al último mensaje
+if (isOpen.value) scrollToBottom();
 </script>
 
 <template>
@@ -69,8 +106,7 @@ const toggle = () => {
         <header class="chatbot__header">
           <div>
             <p class="chatbot__title">Asistente Workspace</p>
-            <p class="chatbot__subtitle">Busca talento en el direct
-            orio</p>
+            <p class="chatbot__subtitle">Busca talento en el directorio</p>
           </div>
           <Button
             icon="pi pi-times"
@@ -89,7 +125,45 @@ const toggle = () => {
             class="chatbot__row"
             :class="`chatbot__row--${m.role}`"
           >
-            <p class="chatbot__bubble" :class="`chatbot__bubble--${m.role}`">{{ m.text }}</p>
+            <div class="chatbot__col">
+              <template v-for="(seg, si) in segmentos(m)" :key="si">
+                <p v-if="seg.texto" class="chatbot__bubble" :class="`chatbot__bubble--${m.role}`">{{ seg.texto }}</p>
+
+                <RouterLink
+                  v-for="e in seg.estudiantes"
+                  :key="`e${e.id}`"
+                  :to="{ name: 'portafolio', params: { userId: e.id } }"
+                  class="chatbot__card chatbot__card--estudiante"
+                  :aria-label="`Ver perfil de ${e.nombre}`"
+                >
+                  <img v-if="e.fotoUrl" :src="e.fotoUrl" :alt="`Foto de ${e.nombre}`" class="chatbot__avatar" />
+                  <span v-else class="chatbot__avatar chatbot__avatar--inicial" aria-hidden="true">{{ e.nombre.charAt(0).toUpperCase() }}</span>
+                  <span class="chatbot__card-info">
+                    <strong>{{ e.nombre }}</strong>
+                    <small v-if="e.especialidad">{{ e.especialidad }}</small>
+                    <span class="chatbot__boton">Ver perfil <i class="pi pi-arrow-right" aria-hidden="true" /></span>
+                  </span>
+                </RouterLink>
+
+                <RouterLink
+                  v-for="p in seg.proyectos"
+                  :key="`p${p.id}`"
+                  :to="{ name: 'proyecto', params: { id: p.id } }"
+                  class="chatbot__card chatbot__card--proyecto"
+                >
+                  <img v-if="p.imagenUrl" :src="p.imagenUrl" :alt="`Vista previa de ${p.titulo}`" class="chatbot__thumb" />
+                  <span v-else class="chatbot__thumb chatbot__thumb--vacio" aria-hidden="true"><i class="pi pi-image" /></span>
+                  <span class="chatbot__card-info">
+                    <strong>{{ p.titulo }}</strong>
+                    <small>Por {{ p.estudiante }}</small>
+                    <span v-if="p.tecnologias.length" class="chatbot__tecs">
+                      <span v-for="t in p.tecnologias" :key="t" class="chatbot__tec">{{ t }}</span>
+                    </span>
+                    <span class="chatbot__card-link">Ver proyecto <i class="pi pi-arrow-right" aria-hidden="true" /></span>
+                  </span>
+                </RouterLink>
+              </template>
+            </div>
           </div>
 
           <div v-if="loading" class="chatbot__row chatbot__row--bot">
@@ -211,9 +285,18 @@ const toggle = () => {
 .chatbot__row--user {
   justify-content: flex-end;
 }
+.chatbot__col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-width: 85%;
+}
+.chatbot__row--user .chatbot__col {
+  align-items: flex-end;
+}
 .chatbot__bubble {
   margin: 0;
-  max-width: 85%;
+  max-width: 100%;
   padding: 0.6rem 0.85rem;
   border-radius: 0.75rem;
   font-size: 0.9rem;
@@ -250,6 +333,87 @@ const toggle = () => {
 .chatbot__send {
   background: var(--ws-primario) !important;
   border-color: var(--ws-primario) !important;
+}
+
+/* Tarjetas de estudiante / proyecto dentro del chat */
+.chatbot__card {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  background: var(--ws-superficie);
+  border: 1px solid var(--ws-borde);
+  border-radius: 0.65rem;
+  color: var(--ws-texto);
+  text-decoration: none;
+  transition: border-color 0.2s;
+}
+.chatbot__card:hover,
+.chatbot__card:focus-visible {
+  border-color: var(--ws-primario);
+}
+.chatbot__avatar {
+  flex: none;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.chatbot__avatar--inicial {
+  display: grid;
+  place-items: center;
+  background: var(--ws-primario);
+  color: #fff;
+  font-weight: 600;
+}
+.chatbot__thumb {
+  flex: none;
+  width: 4.2rem;
+  height: 3.2rem;
+  border-radius: 0.4rem;
+  object-fit: cover;
+}
+.chatbot__thumb--vacio {
+  display: grid;
+  place-items: center;
+  background: var(--ws-fondo);
+  color: var(--ws-texto-suave);
+}
+.chatbot__card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+.chatbot__card-info small {
+  color: var(--ws-texto-suave);
+}
+.chatbot__card-link {
+  color: var(--ws-primario);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.chatbot__boton {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 1rem;
+  background: var(--ws-primario);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.chatbot__tecs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.chatbot__tec {
+  padding: 0.05rem 0.4rem;
+  border-radius: 1rem;
+  background: var(--ws-fondo);
+  font-size: 0.7rem;
 }
 
 /* Animación solo al abrir/cerrar (respuesta a la acción del usuario) */

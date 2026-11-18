@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
-import Chatbot from '@/components/Chatbot.vue'
 import heroEscritorio from '@/assets/escritorio-hero.jpg'
 import ProyectoCard from '@/components/public/ProyectoCard.vue'
 import PortafolioCard from '@/components/portafolios/PortafolioCard.vue'
@@ -94,8 +93,6 @@ const estudiantes = computed(() => estudiantesDatos.value?.estudiantes ?? [])
       <p v-else-if="cargandoEstudiantes" class="estado" role="status">Cargando estudiantes…</p>
       <p v-else class="estado">Aún no hay estudiantes con portafolio público.</p>
     </section>
-
-    <Chatbot />
   </div>
 </template>
 

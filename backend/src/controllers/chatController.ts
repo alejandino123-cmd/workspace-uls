@@ -23,6 +23,13 @@ class GroqError extends Error {
   }
 }
 
+// Minúsculas y sin tildes, para encontrar nombres/títulos dentro de la respuesta
+const normalizar = (t: string) =>
+  t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function consultarGroq(model: string, contents: string, systemInstruction: string): Promise<string> {
@@ -92,17 +99,20 @@ export const askChatbot = async (req: Request, res: Response) => {
       orderBy: { nombre: "asc" },
       take: 50,
       select: {
+        id: true,
         nombre: true,
         perfil: {
           select: {
             porcentajeAvance: true,
             disponibilidad: true,
             habilidades: true,
+            fotoUrl: true,
+            especialidad: true,
             proyectos: {
               where: PUBLICO,
               orderBy: { updatedAt: "desc" },
               take: 3,
-              select: { titulo: true, descripcion: true, tecnologias: true },
+              select: { id: true, titulo: true, descripcion: true, tecnologias: true, imagenUrl: true },
             },
           },
         },
@@ -138,12 +148,61 @@ Reglas:
 - No inventes estudiantes, proyectos ni habilidades que no estén en los datos.
 - Si la respuesta no está en los datos, dilo amablemente y sugiere ver la sección de portafolios.
 - No pidas ni compartas correos, carnets ni datos de contacto.
+- Responde en texto plano: sin markdown, sin asteriscos, sin # títulos, sin líneas --- y sin tablas ni viñetas con símbolos. Si das varias opciones, sepáralas con frases o saltos de línea simples.
 `;
 
     // 3. Consultar a Groq (con reintentos)
     const response = await generarConReintentos(message, systemInstruction);
 
-    return res.json({ response: response || "No pude generar una respuesta." });
+    // 4. Tarjetas: estudiantes y proyectos que la respuesta menciona (máx. 3 de cada uno)
+    const texto = normalizar(response);
+
+    // Nombre completo o, si el modelo lo acortó, sus dos primeras palabras
+    const mencionaA = (t: string, nombre: string) => {
+      const completo = normalizar(nombre);
+      const corto = completo.split(/\s+/).slice(0, 2).join(" ");
+      return t.includes(completo) || t.includes(corto);
+    };
+
+    const pregunta = normalizar(message);
+    const pideProyectos = /proyect|aplicacion|\bapps?\b|sistema|sitio|pagina|demo|repositorio|trabajo|hizo|desarroll/.test(pregunta);
+    const pideGente = /estudiante|perfil|quien|persona|alumno|talento|candidato|habilidad|disponib|avance|conoc/.test(pregunta);
+    const nombraEstudiante = estudiantes.some((e) => mencionaA(pregunta, e.nombre));
+
+    // Si preguntan solo por proyectos, no se muestran perfiles (salvo que pregunten por gente o nombren a alguien)
+    const mostrarEstudiantes = !pideProyectos || pideGente || nombraEstudiante;
+
+    const tarjetasEstudiantes = !mostrarEstudiantes
+      ? []
+      : estudiantes
+          .filter((e) => mencionaA(texto, e.nombre))
+          .slice(0, 3)
+          .map((e) => ({
+            id: e.id,
+            nombre: e.nombre,
+            especialidad: e.perfil?.especialidad ?? null,
+            fotoUrl: e.perfil?.fotoUrl ?? null,
+          }));
+
+    // Los proyectos solo salen si la pregunta trata de proyectos (o nombra uno)
+    const tarjetasProyectos = estudiantes
+      .flatMap((e) =>
+        (e.perfil?.proyectos ?? [])
+          .filter((p) => texto.includes(normalizar(p.titulo)) && (pideProyectos || pregunta.includes(normalizar(p.titulo))))
+          .map((p) => ({
+            id: p.id,
+            titulo: p.titulo,
+            imagenUrl: p.imagenUrl ?? null,
+            tecnologias: p.tecnologias.slice(0, 4),
+            estudiante: e.nombre,
+          })),
+      )
+      .slice(0, 3);
+
+    return res.json({
+      response: response || "No pude generar una respuesta.",
+      tarjetas: { estudiantes: tarjetasEstudiantes, proyectos: tarjetasProyectos },
+    });
   } catch (error) {
     console.error("Error en Chatbot Controller:", error);
     const status = (error as { status?: number }).status;
