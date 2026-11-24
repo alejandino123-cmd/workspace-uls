@@ -12,9 +12,8 @@ import {
   obtenerEstudianteCompleto,
   type EstudianteCompleto,
   type ProyectoDelEstudiante,
-} from '@/service/validaciones'
-import { mensajeDeError } from '@/service/errores'
-
+  mensajeDeError,
+} from '@/service'
 const route = useRoute()
 const router = useRouter()
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth";
 import { validationError } from "../lib/validation";
+import { DIAS_PLAZO_POR_DEFECTO, registrarEvento } from "../lib/historial";
 
 export const validacionesRouter = Router();
 validacionesRouter.use(requireAuth, requireRole("COORDINACION"));
@@ -19,6 +20,8 @@ const evaluarSchema = z
   .object({
     estado: z.enum(["VALIDADO", "RECHAZADO"]),
     comentario: z.string().trim().min(1).max(1000).optional(),
+    // Días que tiene el estudiante para corregir un proyecto rechazado
+    plazoDias: z.coerce.number().int().min(1).max(60).optional(),
   })
   .refine((d) => d.estado === "VALIDADO" || d.comentario, {
     message: "Al rechazar un proyecto debes explicar el motivo",
@@ -36,6 +39,8 @@ const proyectoSelect = {
   estadoValidacion: true,
   updatedAt: true,
   destacado: true,
+  publicado: true,
+  fechaLimiteCorreccion: true,
   validacion: { select: { comentario: true, createdAt: true } },
   createdAt: true,
 } as const;
@@ -118,6 +123,100 @@ validacionesRouter.get("/validados", async (_req, res) => {
     select: { ...proyectoSelect, perfil: { select: autorSelect } },
   });
   res.json(proyectos.map(({ perfil, ...p }) => ({ ...p, estudiante: armarAutor(perfil) })));
+});
+
+/**
+ * @openapi
+ * /api/v1/validaciones/rechazados:
+ *   get:
+ *     tags: [Validaciones]
+ *     summary: Proyectos rechazados que esperan corrección
+ *     description: >
+ *       Solo COORDINACION. Ordenados por fecha límite (la más próxima primero).
+ *       `vencido` indica que el plazo de corrección ya pasó sin que el estudiante enviara cambios.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Lista de proyectos RECHAZADOS con su fecha límite y los datos del autor }
+ *       401: { $ref: '#/components/responses/NoAutenticado' }
+ *       403: { $ref: '#/components/responses/SinPermiso' }
+ */
+validacionesRouter.get("/rechazados", async (_req, res) => {
+  const proyectos = await prisma.proyecto.findMany({
+    where: { estadoValidacion: "RECHAZADO" },
+    orderBy: [{ fechaLimiteCorreccion: { sort: "asc", nulls: "last" } }, { updatedAt: "desc" }],
+    select: { ...proyectoSelect, perfil: { select: autorSelect } },
+  });
+  const ahora = Date.now();
+  res.json(
+    proyectos.map(({ perfil, ...p }) => ({
+      ...p,
+      vencido: Boolean(p.fechaLimiteCorreccion && p.fechaLimiteCorreccion.getTime() < ahora),
+      estudiante: armarAutor(perfil),
+    })),
+  );
+});
+
+/**
+ * @openapi
+ * /api/v1/validaciones/proyectos/{id}/historial:
+ *   get:
+ *     tags: [Validaciones]
+ *     summary: Línea de tiempo de un proyecto
+ *     description: >
+ *       Solo COORDINACION. Eventos del más antiguo al más reciente: CREADO, EDITADO, CORREGIDO,
+ *       VALIDADO, RECHAZADO (con fecha límite), PUBLICADO y OCULTADO.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: integer, minimum: 1 } }
+ *     responses:
+ *       200:
+ *         description: Eventos del proyecto
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id: { type: integer }
+ *                   evento: { type: string, enum: [CREADO, EDITADO, CORREGIDO, VALIDADO, RECHAZADO, PUBLICADO, OCULTADO] }
+ *                   comentario: { type: string, nullable: true }
+ *                   fechaLimite: { type: string, format: date-time, nullable: true }
+ *                   fueraDePlazo: { type: boolean }
+ *                   createdAt: { type: string, format: date-time }
+ *                   actor:
+ *                     type: object
+ *                     nullable: true
+ *                     properties:
+ *                       id: { type: integer }
+ *                       nombre: { type: string }
+ *                       rol: { type: string }
+ *       400: { $ref: '#/components/responses/DatosInvalidos' }
+ *       401: { $ref: '#/components/responses/NoAutenticado' }
+ *       403: { $ref: '#/components/responses/SinPermiso' }
+ *       404: { description: Proyecto no encontrado }
+ */
+validacionesRouter.get("/proyectos/:id/historial", async (req, res) => {
+  const id = idSchema.safeParse(req.params.id);
+  if (!id.success) return res.status(400).json({ error: "El id debe ser un entero positivo" });
+
+  const existe = await prisma.proyecto.findUnique({ where: { id: id.data }, select: { id: true } });
+  if (!existe) return res.status(404).json({ error: "Proyecto no encontrado" });
+
+  const eventos = await prisma.historialProyecto.findMany({
+    where: { proyectoId: id.data },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      evento: true,
+      comentario: true,
+      fechaLimite: true,
+      fueraDePlazo: true,
+      createdAt: true,
+      actor: { select: { id: true, nombre: true, rol: true } },
+    },
+  });
+  res.json(eventos);
 });
 
 /**
@@ -321,6 +420,7 @@ validacionesRouter.get("/estudiantes/:userId", async (req, res) => {
  *             properties:
  *               estado: { type: string, enum: [VALIDADO, RECHAZADO] }
  *               comentario: { type: string, example: "Falta documentación del repositorio." }
+ *               plazoDias: { type: integer, minimum: 1, maximum: 60, default: 7, description: "Solo al rechazar: días que tiene el estudiante para corregir" }
  *     responses:
  *       200:
  *         description: Proyecto evaluado
@@ -338,15 +438,21 @@ validacionesRouter.post("/:proyectoId", async (req: AuthRequest, res) => {
   if (!id.success) return res.status(400).json({ error: "El id debe ser un entero positivo" });
   const parsed = evaluarSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
-  const { estado, comentario } = parsed.data;
+  const { estado, comentario, plazoDias } = parsed.data;
   const proyectoId = id.data;
   const coordinadorId = req.user!.id;
+
+  // Al rechazar, el estudiante tiene un plazo para corregir (7 días si no se indica otro)
+  const fechaLimite =
+    estado === "RECHAZADO"
+      ? new Date(Date.now() + (plazoDias ?? DIAS_PLAZO_POR_DEFECTO) * 24 * 60 * 60 * 1000)
+      : null;
 
   const resultado = await prisma.$transaction(async (tx) => {
     // El filtro estadoValidacion = PENDIENTE evita que dos coordinadores evalúen a la vez
     const { count } = await tx.proyecto.updateMany({
       where: { id: proyectoId, estadoValidacion: "PENDIENTE" },
-      data: { estadoValidacion: estado },
+      data: { estadoValidacion: estado, fechaLimiteCorreccion: fechaLimite },
     });
     if (count === 0) return null;
 
@@ -354,6 +460,13 @@ validacionesRouter.post("/:proyectoId", async (req: AuthRequest, res) => {
       where: { proyectoId },
       create: { proyectoId, coordinadorId, comentario: comentario ?? null },
       update: { coordinadorId, comentario: comentario ?? null },
+    });
+    await registrarEvento(tx, {
+      proyectoId,
+      evento: estado,
+      actorId: coordinadorId,
+      comentario: comentario ?? null,
+      fechaLimite,
     });
     return tx.proyecto.findUnique({ where: { id: proyectoId }, select: proyectoSelect });
   });

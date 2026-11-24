@@ -8,7 +8,7 @@ import InputIcon from 'primevue/inputicon'
 import Message from 'primevue/message'
 import Paginator from 'primevue/paginator'
 import PortafolioCard from '@/components/portafolios/PortafolioCard.vue'
-import type { FiltrosPerfiles } from '@/service/perfiles'
+import type { FiltrosPerfiles } from '@/service'
 import { usePortafolios } from '@/queries/perfiles'
 
 const POR_PAGINA = 9

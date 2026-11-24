@@ -44,6 +44,7 @@ model User {
 
   perfil        PerfilEstudiante?
   validaciones  ValidacionProyecto[]
+  historialProyectos HistorialProyecto[]
 }
 
 model PerfilEstudiante {
@@ -85,10 +86,12 @@ model Proyecto {
   estadoValidacion EstadoValidacion @default(PENDIENTE)
   publicado        Boolean          @default(false)
   destacado        Boolean          @default(false) // lo marca Coordinación para la sección de destacados
+  fechaLimiteCorreccion DateTime?   // plazo para corregir un proyecto RECHAZADO (lo fija Coordinación)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   validacion ValidacionProyecto?
+  historial  HistorialProyecto[]
 }
 model ValidacionProyecto {
   id            Int      @id @default(autoincrement())
@@ -98,4 +101,30 @@ model ValidacionProyecto {
   coordinador   User     @relation(fields: [coordinadorId], references: [id])
   comentario    String?
   createdAt     DateTime @default(now())
+}
+
+// Eventos de la línea de tiempo de un proyecto (los ve Coordinación)
+enum EventoProyecto {
+  CREADO
+  EDITADO
+  CORREGIDO
+  VALIDADO
+  RECHAZADO
+  PUBLICADO
+  OCULTADO
+}
+
+model HistorialProyecto {
+  id           Int            @id @default(autoincrement())
+  proyectoId   Int
+  proyecto     Proyecto       @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  evento       EventoProyecto
+  actorId      Int?
+  actor        User?          @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  comentario   String?
+  fechaLimite  DateTime?      // solo en RECHAZADO: hasta cuándo puede corregir el estudiante
+  fueraDePlazo Boolean        @default(false) // solo en CORREGIDO: se envió después de la fecha límite
+  createdAt    DateTime       @default(now())
+
+  @@index([proyectoId, createdAt])
 }

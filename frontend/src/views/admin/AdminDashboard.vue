@@ -1,32 +1,49 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
+import InputNumber from 'primevue/inputnumber'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Message from 'primevue/message'
+import LineaTiempoProyecto from '@/components/proyectos/LineaTiempoProyecto.vue'
 import {
   evaluarProyecto,
   listarPendientes,
+  listarRechazados,
   listarValidados,
   marcarDestacado,
   type ProyectoPendiente,
+  type ProyectoRechazado,
   type ProyectoValidado,
-} from '@/service/validaciones'
-import { mensajeDeError } from '@/service/errores'
+  mensajeDeError,
+} from '@/service'
+import { plazoCorreccion } from '@/lib/proyectos'
+
+type Vista = 'pendientes' | 'validados' | 'rechazados'
 
 const pendientes = ref<ProyectoPendiente[]>([])
 const cargando = ref(true)
 const error = ref('')
 
 // Pestaña activa y proyectos ya validados
-const vista = ref<'pendientes' | 'validados'>('pendientes')
+const vista = ref<Vista>('pendientes')
 const validados = ref<ProyectoValidado[]>([])
 const cargandoValidados = ref(false)
 const errorValidados = ref('')
+
+// Proyectos rechazados que esperan corrección del estudiante
+const rechazados = ref<ProyectoRechazado[]>([])
+const cargandoRechazados = ref(false)
+const errorRechazados = ref('')
+const vencidos = computed(() => rechazados.value.filter((p) => p.vencido).length)
+
+// Días que tiene el estudiante para corregir si se rechaza
+const PLAZO_POR_DEFECTO = 7
+const plazoDias = ref(PLAZO_POR_DEFECTO)
 
 // Diálogo de revisión (en modo lectura para los validados)
 const revisionVisible = ref(false)
@@ -74,15 +91,34 @@ async function cambiarDestacado(p: ProyectoValidado, valor: boolean) {
   }
 }
 
-function cambiarVista(nueva: 'pendientes' | 'validados') {
+async function cargarRechazados() {
+  cargandoRechazados.value = true
+  errorRechazados.value = ''
+  try {
+    rechazados.value = await listarRechazados()
+  } catch (e) {
+    errorRechazados.value = mensajeDeError(e, 'No se pudieron cargar los proyectos rechazados')
+  } finally {
+    cargandoRechazados.value = false
+  }
+}
+
+function cambiarVista(nueva: Vista) {
   vista.value = nueva
   if (nueva === 'validados') cargarValidados()
+  if (nueva === 'rechazados') cargarRechazados()
 }
+
+const tituloDialogo = computed(() => {
+  if (!soloLectura.value) return 'Revisar proyecto'
+  return vista.value === 'rechazados' ? 'Proyecto rechazado' : 'Proyecto validado'
+})
 
 function revisar(p: ProyectoPendiente, lectura = false) {
   seleccionado.value = p
   soloLectura.value = lectura
   comentario.value = ''
+  plazoDias.value = PLAZO_POR_DEFECTO
   errorRevision.value = ''
   revisionVisible.value = true
 }
@@ -102,6 +138,7 @@ async function evaluar(estado: 'VALIDADO' | 'RECHAZADO') {
     await evaluarProyecto(seleccionado.value.id, {
       estado,
       ...(texto ? { comentario: texto } : {}),
+      ...(estado === 'RECHAZADO' ? { plazoDias: plazoDias.value } : {}),
     })
     revisionVisible.value = false
     await cargar()
@@ -123,24 +160,78 @@ onMounted(cargar)
       <div>
         <h1 class="page-title">Validaciones</h1>
         <p class="page-lead">
-          {{ vista === 'pendientes'
-            ? 'Proyectos de estudiantes pendientes de revisión, del más antiguo al más reciente.'
-            : 'Proyectos que ya fueron validados, con los datos de su estudiante.' }}
+          <template v-if="vista === 'pendientes'">Proyectos de estudiantes pendientes de revisión, del más antiguo al más reciente.</template>
+          <template v-else-if="vista === 'validados'">Proyectos que ya fueron validados, con los datos de su estudiante.</template>
+          <template v-else>Proyectos rechazados que esperan corrección, ordenados por el plazo más próximo.</template>
         </p>
       </div>
       <Tag v-if="vista === 'pendientes' && !cargando" :value="`${pendientes.length} pendiente${pendientes.length === 1 ? '' : 's'}`" severity="warn" />
       <Tag v-else-if="vista === 'validados' && !cargandoValidados" :value="`${validados.length} validado${validados.length === 1 ? '' : 's'}`" severity="success" />
+      <div v-else-if="vista === 'rechazados' && !cargandoRechazados" class="etiquetas">
+        <Tag :value="`${rechazados.length} rechazado${rechazados.length === 1 ? '' : 's'}`" severity="danger" />
+        <Tag v-if="vencidos" :value="`${vencidos} con plazo vencido`" severity="warn" />
+      </div>
     </header>
 
     <div class="pestanas">
       <Button label="Pendientes" icon="pi pi-clock" :outlined="vista !== 'pendientes'" @click="cambiarVista('pendientes')" />
       <Button label="Validados" icon="pi pi-check-circle" :outlined="vista !== 'validados'" @click="cambiarVista('validados')" />
+      <Button label="Rechazados" icon="pi pi-times-circle" :outlined="vista !== 'rechazados'" @click="cambiarVista('rechazados')" />
     </div>
 
     <Message v-if="vista === 'pendientes' && error" severity="error" :closable="false" class="aviso">{{ error }}</Message>
     <Message v-if="vista === 'validados' && errorValidados" severity="error" :closable="false" class="aviso">{{ errorValidados }}</Message>
+    <Message v-if="vista === 'rechazados' && errorRechazados" severity="error" :closable="false" class="aviso">{{ errorRechazados }}</Message>
 
-    <div v-if="vista === 'validados'" class="tabla-card">
+    <div v-if="vista === 'rechazados'" class="tabla-card">
+      <DataTable :value="rechazados" :loading="cargandoRechazados" data-key="id">
+        <template #empty>
+          <div class="vacio">
+            <span class="vacio-icono"><i class="pi pi-check-circle"></i></span>
+            <p class="vacio-titulo">No hay proyectos rechazados</p>
+            <p class="vacio-texto">Los proyectos que rechaces aparecerán aquí hasta que el estudiante los corrija.</p>
+          </div>
+        </template>
+
+        <Column header="Proyecto">
+          <template #body="{ data }">
+            <div class="proy-titulo">{{ data.titulo }}</div>
+            <div class="proy-meta">Rechazado el {{ fecha(data.validacion?.createdAt ?? data.updatedAt) }}</div>
+            <div v-if="data.validacion?.comentario" class="proy-meta motivo">“{{ data.validacion.comentario }}”</div>
+          </template>
+        </Column>
+
+        <Column header="Estudiante">
+          <template #body="{ data }">
+            <div class="proy-titulo">
+              <RouterLink :to="'/admin/estudiantes/' + data.estudiante.id">{{ data.estudiante.nombre }}</RouterLink>
+            </div>
+            <div class="proy-meta">Carnet: {{ data.estudiante.carnet ?? 'sin registrar' }}</div>
+          </template>
+        </Column>
+
+        <Column header="Plazo de corrección" style="width: 12rem">
+          <template #body="{ data }">
+            <template v-if="plazoCorreccion(data.fechaLimiteCorreccion)">
+              <Tag
+                :value="plazoCorreccion(data.fechaLimiteCorreccion)!.texto"
+                :severity="plazoCorreccion(data.fechaLimiteCorreccion)!.severity"
+              />
+              <div class="proy-meta">Hasta el {{ fecha(data.fechaLimiteCorreccion) }}</div>
+            </template>
+            <span v-else class="proy-meta">Sin plazo</span>
+          </template>
+        </Column>
+
+        <Column header="" style="width: 9rem">
+          <template #body="{ data }">
+            <Button label="Historial" icon="pi pi-history" size="small" outlined @click="revisar(data, true)" />
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+
+    <div v-else-if="vista === 'validados'" class="tabla-card">
       <DataTable :value="validados" :loading="cargandoValidados" data-key="id">
         <template #empty>
           <div class="vacio">
@@ -222,7 +313,7 @@ onMounted(cargar)
     <Dialog
       v-model:visible="revisionVisible"
       modal
-      :header="soloLectura ? 'Proyecto validado' : 'Revisar proyecto'"
+      :header="tituloDialogo"
       :style="{ width: '42rem' }"
       :breakpoints="{ '720px': '95vw' }"
     >
@@ -275,7 +366,7 @@ onMounted(cargar)
 
         <template v-if="soloLectura">
           <div v-if="seleccionado.validacion?.comentario" class="campo">
-            <label>Comentario de la validación</label>
+            <label>{{ vista === 'rechazados' ? 'Motivo del rechazo' : 'Comentario de la validación' }}</label>
             <p class="rev-texto">{{ seleccionado.validacion.comentario }}</p>
           </div>
         </template>
@@ -287,8 +378,27 @@ onMounted(cargar)
             <small>Opcional al validar. Obligatorio al rechazar: el estudiante lo verá en su proyecto.</small>
           </div>
 
+          <div class="campo">
+            <label for="plazo">Plazo para corregir si se rechaza</label>
+            <div class="plazo">
+              <InputNumber
+                v-model="plazoDias"
+                input-id="plazo"
+                :min="1"
+                :max="60"
+                show-buttons
+                suffix=" días"
+                :input-style="{ width: '7rem' }"
+              />
+            </div>
+            <small>Solo aplica al rechazar. El estudiante verá la fecha límite en su proyecto.</small>
+          </div>
+
           <Message v-if="errorRevision" severity="error" size="small" :closable="false">{{ errorRevision }}</Message>
         </template>
+
+        <h3 class="rev-sub">Línea de tiempo</h3>
+        <LineaTiempoProyecto :proyecto-id="seleccionado.id" />
       </div>
 
       <template v-if="soloLectura" #footer>
@@ -340,8 +450,26 @@ onMounted(cargar)
 
 .pestanas {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+.etiquetas {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.motivo {
+  font-style: italic;
+  max-width: 22rem;
+}
+
+.plazo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .tabla-card {

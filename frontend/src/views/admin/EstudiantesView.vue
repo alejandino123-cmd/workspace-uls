@@ -6,9 +6,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
-import { buscarEstudiantes, type EstudianteResumen } from '@/service/validaciones'
-import { mensajeDeError } from '@/service/errores'
-
+import { buscarEstudiantes, type EstudianteResumen, mensajeDeError } from '@/service'
 const router = useRouter()
 const LIMITE = 20
 

@@ -11,7 +11,8 @@ export const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "1d",
   // Clave de 32 bytes en base64 para cifrar los secretos de la autenticación en dos pasos
   cifradoKey: required("CIFRADO_KEY"),
-  // Intentos fallidos permitidos cada 15 minutos por correo+IP (y por usuario al cambiar contraseña)
+  // Intentos fallidos permitidos cada 5 minutos por correo+IP (y por usuario al cambiar contraseña,
+  // y por inicio de sesión en el código 2FA). Por defecto 3.
   loginMaxIntentos: Number(process.env.LOGIN_MAX_INTENTOS ?? 3),
   // Dominio del correo institucional; los estudiantes solo pueden registrarse con él
   dominioInstitucional: (process.env.DOMINIO_INSTITUCIONAL ?? "uls.edu.sv").trim().toLowerCase(),

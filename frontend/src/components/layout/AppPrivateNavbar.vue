@@ -6,7 +6,7 @@ import Button from 'primevue/button'
 import type { MenuItem } from 'primevue/menuitem'
 import { useAuthStore } from '@/stores/auth'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
-import { obtenerPerfil } from '@/service/perfil'
+import { obtenerPerfil } from '@/service'
 
 // Barra superior de la zona privada: botón para abrir el menú lateral (móvil) y menú del usuario.
 const emit = defineEmits<{ (e: 'menu'): void }>()

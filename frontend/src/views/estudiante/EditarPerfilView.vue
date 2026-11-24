@@ -19,9 +19,8 @@ import {
   subirFotoPerfil,
   type Disponibilidad,
   type PerfilInput,
-} from '@/service/perfil'
-import { mensajeDeError } from '@/service/errores'
-
+  mensajeDeError,
+} from '@/service'
 const router = useRouter()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()

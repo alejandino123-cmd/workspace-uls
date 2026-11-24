@@ -10,9 +10,8 @@ import {
   desactivarDosPasos,
   estadoDosPasos,
   type ConfiguracionDosPasos,
-} from '@/service/dosPasos'
-import { mensajeDeError } from '@/service/errores'
-
+  mensajeDeError,
+} from '@/service'
 // Estado: 'cargando' | 'inactivo' | 'configurando' | 'activo' | 'desactivando'
 const estado = ref<'cargando' | 'inactivo' | 'configurando' | 'activo' | 'desactivando'>('cargando')
 const configuracion = ref<ConfiguracionDosPasos | null>(null)
@@ -51,6 +50,10 @@ async function confirmarActivacion() {
     error.value = 'Escribe el código que muestra tu aplicación'
     return
   }
+  if (!/^\d{6}$/.test(codigo.value.trim())) {
+    error.value = 'El código debe tener 6 dígitos'
+    return
+  }
   enviando.value = true
   try {
     await activarDosPasos(codigo.value.trim())
@@ -58,6 +61,7 @@ async function confirmarActivacion() {
     codigo.value = ''
     estado.value = 'activo'
   } catch (e) {
+    codigo.value = ''
     error.value = mensajeDeError(e, 'El código no es correcto')
   } finally {
     enviando.value = false
@@ -70,12 +74,17 @@ async function confirmarDesactivacion() {
     error.value = 'Escribe el código que muestra tu aplicación'
     return
   }
+  if (!/^\d{6}$/.test(codigo.value.trim())) {
+    error.value = 'El código debe tener 6 dígitos'
+    return
+  }
   enviando.value = true
   try {
     await desactivarDosPasos(codigo.value.trim())
     codigo.value = ''
     estado.value = 'inactivo'
   } catch (e) {
+    codigo.value = ''
     error.value = mensajeDeError(e, 'El código no es correcto')
   } finally {
     enviando.value = false

@@ -4,7 +4,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
 import { fechaCorta } from '@/lib/formato'
-import type { ProyectoResumen } from '@/service/catalogo'
+import type { ProyectoResumen } from '@/service'
 
 const props = defineProps<{
   proyecto: ProyectoResumen

@@ -8,7 +8,7 @@ import Skeleton from 'primevue/skeleton'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
 import { fechaCorta } from '@/lib/formato'
 import { useProyectoPublico } from '@/queries/catalogo'
-import { mensajeDeError } from '@/service/errores'
+import { mensajeDeError } from '@/service'
 
 const props = defineProps<{ id: number }>()
 

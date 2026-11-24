@@ -6,6 +6,8 @@ import { etiquetasSchema, validationError } from "../lib/validation";
 import multer from "multer";
 import { borrarFoto, cloudinaryConfigurado, subirImagenProyecto } from "../lib/cloudinary";
 import { MAX_BYTES_IMAGEN, esImagenPermitida } from "../lib/imagen";
+import { errorPerfilIncompleto, requisitosDe } from "../lib/publicacion";
+import { registrarEvento, reiniciarRevision } from "../lib/historial";
 
 export const proyectosRouter = Router();
 proyectosRouter.use(requireAuth, requireRole("ESTUDIANTE"));
@@ -55,6 +57,7 @@ const proyectoSelect = {
   estadoValidacion: true,
   publicado: true,
   destacado: true,
+  fechaLimiteCorreccion: true,
   createdAt: true,
   updatedAt: true,
   validacion: { select: { comentario: true, createdAt: true } },
@@ -101,14 +104,14 @@ function parseId(raw: unknown, res: Response) {
  *               urlDemo: { type: string, nullable: true }
  *               urlDocumentacion: { type: string, nullable: true }
  *               tecnologias: { type: array, items: { type: string }, example: ["Vue", "Node.js"] }
- *               publicado: { type: boolean, default: false, description: Si aparece en el portafolio público (requiere estar VALIDADO) }
+ *               publicado: { type: boolean, default: false, description: "Si aparece en el portafolio público (requiere estar VALIDADO y perfil con foto, biografía y habilidades)" }
  *     responses:
  *       201:
  *         description: Proyecto creado
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Proyecto' }
- *       400: { $ref: '#/components/responses/DatosInvalidos' }
+ *       400: { description: "Datos inválidos, o perfil incompleto para publicar (code PERFIL_INCOMPLETO, con `faltantes`)" }
  *       401: { $ref: '#/components/responses/NoAutenticado' }
  *       403: { description: "Sin permiso, o carnet no registrado (code CARNET_REQUERIDO)" }
  *   get:
@@ -138,12 +141,45 @@ proyectosRouter.post("/", async (req: AuthRequest, res) => {
     });
   }
 
-  const proyecto = await prisma.proyecto.create({
-    data: { perfilId: perfil.id, ...parsed.data },
-    select: proyectoSelect,
+  if (parsed.data.publicado) {
+    const requisitos = await requisitosDe(req.user!.id);
+    if (!requisitos.cumple) return res.status(400).json(errorPerfilIncompleto(requisitos));
+  }
+
+  const proyecto = await prisma.$transaction(async (tx) => {
+    const creado = await tx.proyecto.create({
+      data: { perfilId: perfil.id, ...parsed.data },
+      select: proyectoSelect,
+    });
+    await registrarEvento(tx, { proyectoId: creado.id, evento: "CREADO", actorId: req.user!.id });
+    return creado;
   });
 
   res.status(201).json(proyecto);
+});
+
+/**
+ * @openapi
+ * /api/v1/proyectos/requisitos-publicacion:
+ *   get:
+ *     tags: [Proyectos]
+ *     summary: ¿Mi perfil cumple los requisitos para publicar proyectos?
+ *     description: Para publicar se necesita foto de perfil, biografía y al menos una habilidad.
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Resultado de la revisión
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cumple: { type: boolean }
+ *                 faltantes: { type: array, items: { type: string }, example: ["Biografía"] }
+ *       401: { $ref: '#/components/responses/NoAutenticado' }
+ */
+proyectosRouter.get("/requisitos-publicacion", async (req: AuthRequest, res) => {
+  res.json(await requisitosDe(req.user!.id));
 });
 
 proyectosRouter.get("/", async (req: AuthRequest, res) => {
@@ -178,7 +214,10 @@ proyectosRouter.get("/", async (req: AuthRequest, res) => {
  *   put:
  *     tags: [Proyectos]
  *     summary: Actualizar mi proyecto (parcial)
- *     description: Solo se cambian los campos enviados. Al editar, el estado vuelve a PENDIENTE.
+ *     description: >
+ *       Solo se cambian los campos enviados. Al editar el contenido, el estado vuelve a PENDIENTE
+ *       (si estaba RECHAZADO queda registrado como corrección). Cambiar solo `publicado` no reinicia la revisión;
+ *       para publicar, el perfil debe tener foto, biografía y al menos una habilidad (si no, 400 PERFIL_INCOMPLETO).
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - { in: path, name: id, required: true, schema: { type: integer } }
@@ -235,24 +274,30 @@ proyectosRouter.put("/:id", async (req: AuthRequest, res) => {
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
 
-  // Cambiar solo la publicación no vuelve a revisar el proyecto; editar su contenido sí
-  const reiniciarValidacion = Object.keys(parsed.data).some((campo) => campo !== "publicado");
-
-  // updateMany permite filtrar por dueño en la misma consulta
-  const count = await prisma.$transaction(async (tx) => {
-    const { count } = await tx.proyecto.updateMany({
-      where: { id, perfil: { userId: req.user!.id } },
-      data: {
-        ...parsed.data,
-        ...(reiniciarValidacion ? { estadoValidacion: "PENDIENTE" as const } : {}),
-      },
-    });
-    if (count > 0 && reiniciarValidacion) {
-      await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
-    }
-    return count;
+  const userId = req.user!.id;
+  const actual = await prisma.proyecto.findFirst({
+    where: { id, perfil: { userId } },
+    select: { publicado: true },
   });
-  if (count === 0) return res.status(404).json({ error: "Proyecto no encontrado" });
+  if (!actual) return res.status(404).json({ error: "Proyecto no encontrado" });
+
+  const { publicado, ...contenido } = parsed.data;
+  const cambiaPublicacion = publicado !== undefined && publicado !== actual.publicado;
+  if (cambiaPublicacion && publicado) {
+    const requisitos = await requisitosDe(userId);
+    if (!requisitos.cumple) return res.status(400).json(errorPerfilIncompleto(requisitos));
+  }
+
+  // Cambiar solo la publicación no vuelve a revisar el proyecto; editar su contenido sí
+  const reiniciar = Object.keys(contenido).length > 0;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.proyecto.update({ where: { id }, data: parsed.data });
+    if (reiniciar) await reiniciarRevision(tx, id, userId);
+    if (cambiaPublicacion) {
+      await registrarEvento(tx, { proyectoId: id, evento: publicado ? "PUBLICADO" : "OCULTADO", actorId: userId });
+    }
+  });
 
   const proyecto = await prisma.proyecto.findUnique({ where: { id }, select: proyectoSelect });
   res.json(proyecto);
@@ -360,9 +405,9 @@ proyectosRouter.put(
     await prisma.$transaction(async (tx) => {
       await tx.proyecto.update({
         where: { id },
-        data: { imagenUrl: subida.url, imagenPublicId: subida.publicId, estadoValidacion: "PENDIENTE" },
+        data: { imagenUrl: subida.url, imagenPublicId: subida.publicId },
       });
-      await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
+      await reiniciarRevision(tx, id, req.user!.id);
     });
 
     if (actual.imagenPublicId) {
@@ -388,9 +433,9 @@ proyectosRouter.delete("/:id/imagen", async (req: AuthRequest, res) => {
   await prisma.$transaction(async (tx) => {
     await tx.proyecto.update({
       where: { id },
-      data: { imagenUrl: null, imagenPublicId: null, estadoValidacion: "PENDIENTE" },
+      data: { imagenUrl: null, imagenPublicId: null },
     });
-    await tx.validacionProyecto.deleteMany({ where: { proyectoId: id } });
+    await reiniciarRevision(tx, id, req.user!.id);
   });
 
   if (actual.imagenPublicId) {

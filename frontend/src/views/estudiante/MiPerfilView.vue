@@ -10,10 +10,14 @@ import FileUpload from 'primevue/fileupload'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
 import SeguridadDosPasos from '@/components/perfil/SeguridadDosPasos.vue'
 import { useMisProyectos } from '@/queries/proyectos'
-import { obtenerPerfilCompleto, quitarCv, subirCv } from '@/service/perfil'
-import type { EstadoValidacion, Proyecto } from '@/service/proyectos'
-import { mensajeDeError } from '@/service/errores'
-
+import {
+  obtenerPerfilCompleto,
+  quitarCv,
+  subirCv,
+  type EstadoValidacion,
+  type Proyecto,
+  mensajeDeError,
+} from '@/service'
 const router = useRouter()
 const queryClient = useQueryClient()
 

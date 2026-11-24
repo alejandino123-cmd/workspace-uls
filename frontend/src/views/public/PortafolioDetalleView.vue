@@ -5,10 +5,7 @@ import Button from 'primevue/button'
 import ProgressBar from 'primevue/progressbar'
 import Message from 'primevue/message'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
-import { obtenerPortafolio, type PortafolioPublico } from '@/service/perfiles'
-import { etiquetaDisponibilidad } from '@/service/perfil'
-import { mensajeDeError } from '@/service/errores'
-
+import { obtenerPortafolio, type PortafolioPublico, etiquetaDisponibilidad, mensajeDeError } from '@/service'
 // userId llega desde la ruta (/portafolios/:userId) como texto
 const props = defineProps<{ userId: string }>()
 

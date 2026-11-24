@@ -1,15 +1,33 @@
 import { describe, it, expect } from "@jest/globals";
 import express from "express";
 import request from "supertest";
-import { crearLimitador, claveCorreo } from "../src/lib/rate-limit";
+import { crearLimitador, claveCorreo, intentosRestantes } from "../src/lib/rate-limit";
 
 // App mínima con el límite real por correo+IP, con 2 intentos para que la prueba sea corta
-function appConLimite() {
+function appConLimite(max = 2) {
   const app = express();
   app.use(express.json());
-  app.post("/login", crearLimitador(claveCorreo, 2), (_req, res) => res.status(401).json({ error: "no" }));
+  app.post("/login", crearLimitador(claveCorreo, max), (req, res) =>
+    res.status(401).json({ error: "no", intentosRestantes: intentosRestantes(req) }),
+  );
   return app;
 }
+
+describe("intentos restantes", () => {
+  it("con 3 intentos avisa 2, 1, 0 y luego bloquea con el tiempo de espera", async () => {
+    const app = appConLimite(3);
+    const datos = { email: "ana@uls.edu.sv" };
+    const restantes = [];
+    for (let i = 0; i < 3; i++) restantes.push((await request(app).post("/login").send(datos)).body.intentosRestantes);
+    expect(restantes).toEqual([2, 1, 0]);
+
+    const bloqueado = await request(app).post("/login").send(datos);
+    expect(bloqueado.status).toBe(429);
+    expect(bloqueado.body.code).toBe("DEMASIADOS_INTENTOS");
+    expect(bloqueado.body.reintentarEnSegundos).toBeGreaterThan(0);
+    expect(bloqueado.body.reintentarEnSegundos).toBeLessThanOrEqual(300);
+  });
+});
 
 describe("límite de intentos fallidos por correo+IP", () => {
   it("bloquea la misma cuenta desde la misma IP tras agotar los intentos", async () => {

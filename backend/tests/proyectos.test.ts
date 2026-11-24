@@ -156,6 +156,7 @@ describe("publicado en el portafolio", () => {
     expect(creado.body.publicado).toBe(false);
     const id = creado.body.id as number;
     await prisma.proyecto.update({ where: { id }, data: { estadoValidacion: "VALIDADO" } });
+    await completarPerfil();
 
     const publicado = await request(app).put(`/api/v1/proyectos/${id}`).set(h).send({ publicado: true });
     expect(publicado.status).toBe(200);
@@ -172,5 +173,46 @@ describe("publicado en el portafolio", () => {
     const res = await request(app).post("/api/v1/proyectos").set(h).send({ ...valido, publicado: "si" });
     expect(res.status).toBe(400);
     expect(res.body.detalles[0].campo).toBe("publicado");
+  });
+});
+
+// Foto, biografía y una habilidad: lo mínimo para poder publicar
+async function completarPerfil(email = "ana@uls.edu.sv") {
+  await prisma.perfilEstudiante.updateMany({
+    where: { user: { email } },
+    data: { fotoUrl: "https://res.cloudinary.com/demo/foto.jpg", biografia: "Estudiante de computación", habilidades: ["Vue"] },
+  });
+}
+
+describe("requisitos para publicar", () => {
+  it("informa qué le falta al perfil", async () => {
+    const r = await request(app).get("/api/v1/proyectos/requisitos-publicacion").set(auth());
+    expect(r.status).toBe(200);
+    expect(r.body.cumple).toBe(false);
+    expect(r.body.faltantes).toEqual(["Foto de perfil", "Biografía", "Al menos una habilidad"]);
+
+    await completarPerfil();
+    const listo = await request(app).get("/api/v1/proyectos/requisitos-publicacion").set(auth());
+    expect(listo.body).toEqual({ cumple: true, faltantes: [] });
+  });
+
+  it("no deja publicar con el perfil incompleto (al crear ni al editar)", async () => {
+    const alCrear = await request(app).post("/api/v1/proyectos").set(auth()).send({ ...valido, publicado: true });
+    expect(alCrear.status).toBe(400);
+    expect(alCrear.body.code).toBe("PERFIL_INCOMPLETO");
+
+    const { body } = await request(app).post("/api/v1/proyectos").set(auth()).send(valido);
+    const alEditar = await request(app).put(`/api/v1/proyectos/${body.id}`).set(auth()).send({ publicado: true });
+    expect(alEditar.status).toBe(400);
+    expect(alEditar.body.faltantes).toContain("Biografía");
+  });
+
+  it("ocultar un proyecto siempre está permitido", async () => {
+    await completarPerfil();
+    const { body } = await request(app).post("/api/v1/proyectos").set(auth()).send({ ...valido, publicado: true });
+    await prisma.perfilEstudiante.updateMany({ data: { biografia: null } });
+    const oculto = await request(app).put(`/api/v1/proyectos/${body.id}`).set(auth()).send({ publicado: false });
+    expect(oculto.status).toBe(200);
+    expect(oculto.body.publicado).toBe(false);
   });
 });

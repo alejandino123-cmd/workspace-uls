@@ -6,7 +6,7 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, type AuthRequest } from "../middleware/auth";
 import { cifrar, descifrar } from "../lib/cifrado";
 import { signToken, verifyTokenTemporal } from "../lib/tokens";
-import { limitarPorTokenTemporal } from "../lib/rate-limit";
+import { intentosRestantes, limitarPorTokenTemporal } from "../lib/rate-limit";
 import { validationError } from "../lib/validation";
 
 export const dosPasosRouter = Router();
@@ -207,7 +207,7 @@ dosPasosRouter.post("/verificar", limitarPorTokenTemporal, async (req, res) => {
     .safeParse(req.body);
   if (!parsed.success) return res.status(400).json(validationError(parsed.error));
 
-  const vencida = { error: "La verificación venció. Vuelve a iniciar sesión" };
+  const vencida = { error: "La verificación venció. Vuelve a iniciar sesión", code: "VERIFICACION_VENCIDA" };
   let payload;
   try {
     payload = verifyTokenTemporal(parsed.data.tokenTemporal);
@@ -233,7 +233,11 @@ dosPasosRouter.post("/verificar", limitarPorTokenTemporal, async (req, res) => {
     return res.status(401).json(vencida);
   }
   if (!(await verificarSegundoPaso(usuario, parsed.data.codigo))) {
-    return res.status(401).json({ error: "El código no es correcto" });
+    return res.status(401).json({
+      error: "El código no es correcto",
+      code: "CODIGO_INVALIDO",
+      intentosRestantes: intentosRestantes(req),
+    });
   }
 
   const user = { id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol };

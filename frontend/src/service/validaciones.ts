@@ -27,9 +27,36 @@ export async function listarValidados() {
   return data
 }
 
+// Rechazados que esperan corrección; `vencido` = ya pasó la fecha límite
+export type ProyectoRechazado = ProyectoPendiente & { vencido: boolean }
+
+export async function listarRechazados() {
+  const { data } = await api.get<ProyectoRechazado[]>('/validaciones/rechazados')
+  return data
+}
+
+// Línea de tiempo de un proyecto
+export type EventoProyecto = 'CREADO' | 'EDITADO' | 'CORREGIDO' | 'VALIDADO' | 'RECHAZADO' | 'PUBLICADO' | 'OCULTADO'
+
+export interface EventoHistorial {
+  id: number
+  evento: EventoProyecto
+  comentario: string | null
+  fechaLimite: string | null
+  fueraDePlazo: boolean
+  createdAt: string
+  actor: { id: number; nombre: string; rol: string } | null
+}
+
+export async function obtenerHistorial(proyectoId: number) {
+  const { data } = await api.get<EventoHistorial[]>(`/validaciones/proyectos/${proyectoId}/historial`)
+  return data
+}
+
 export interface EvaluacionInput {
   estado: 'VALIDADO' | 'RECHAZADO'
   comentario?: string // obligatorio al rechazar
+  plazoDias?: number // solo al rechazar: días para corregir (7 por defecto)
 }
 
 // 409 si el proyecto ya fue evaluado por otra persona

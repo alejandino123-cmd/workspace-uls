@@ -2,9 +2,7 @@
 import TecnologiaChip from '@/components/tecnologias/TecnologiaChip.vue'
 import { RouterLink } from 'vue-router'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
-import { etiquetaDisponibilidad } from '@/service/perfil'
-import type { PerfilPublicoResumen, ProyectoPublico } from '@/service/perfiles'
-
+import { etiquetaDisponibilidad, type PerfilPublicoResumen, type ProyectoPublico } from '@/service'
 defineProps<{
   estudiante: PerfilPublicoResumen
   // Vista previa opcional: se muestran los 2 primeros proyectos

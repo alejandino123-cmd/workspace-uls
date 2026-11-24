@@ -9,13 +9,27 @@ import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import ToggleSwitch from 'primevue/toggleswitch'
 import ProyectoFormDialog from '@/components/proyectos/ProyectoFormDialog.vue'
-import { useActualizarProyecto, useEliminarProyecto, useMisProyectos } from '@/queries/proyectos'
-import type { EstadoValidacion, Proyecto } from '@/service/proyectos'
-import { mensajeDeError } from '@/service/errores'
+import {
+  useActualizarProyecto,
+  useEliminarProyecto,
+  useMisProyectos,
+  useRequisitosPublicacion,
+} from '@/queries/proyectos'
+import { type EstadoValidacion, type Proyecto, mensajeDeError } from '@/service'
+import { plazoCorreccion, visibilidadDe } from '@/lib/proyectos'
+import { fechaCorta } from '@/lib/formato'
 
 // Datos con TanStack Query: caché, estado de carga y error, y reintento automático
 const { data, isPending, isError, error, refetch } = useMisProyectos()
 const proyectos = computed<Proyecto[]>(() => data.value ?? [])
+
+// Requisitos mínimos del perfil para publicar (foto, biografía, habilidades)
+const { data: requisitos } = useRequisitosPublicacion()
+const perfilListo = computed(() => requisitos.value?.cumple ?? true)
+
+// Confirmación antes de hacer público un proyecto
+const publicarVisible = ref(false)
+const aPublicar = ref<Proyecto | null>(null)
 
 const actualizar = useActualizarProyecto()
 const eliminar = useEliminarProyecto()
@@ -77,14 +91,34 @@ async function borrar() {
   }
 }
 
-// Solo se puede publicar un proyecto ya validado
-async function cambiarPublicado(p: Proyecto, valor: boolean) {
+// Solo se puede publicar un proyecto ya validado y con el perfil completo.
+// Publicar pide confirmación; ocultar es inmediato.
+function cambiarPublicado(p: Proyecto, valor: boolean) {
+  if (valor) {
+    aPublicar.value = p
+    publicarVisible.value = true
+    return
+  }
+  guardarPublicado(p, false)
+}
+
+async function guardarPublicado(p: Proyecto, valor: boolean) {
   errorAccion.value = ''
   try {
     await actualizar.mutateAsync({ id: p.id, datos: { publicado: valor } })
+    publicarVisible.value = false
   } catch (e) {
+    publicarVisible.value = false
     errorAccion.value = mensajeDeError(e, 'No se pudo cambiar la publicación')
   }
+}
+
+// Por qué no se puede activar el interruptor de un proyecto (si no se puede)
+function bloqueoPublicar(p: Proyecto): string | null {
+  if (p.publicado) return null // ocultar siempre está permitido
+  if (p.estadoValidacion !== 'VALIDADO') return 'Disponible cuando la coordinación lo valide'
+  if (!perfilListo.value) return 'Completa tu perfil para publicar'
+  return null
 }
 
 // Mientras se cambia la publicación de un proyecto, solo ese interruptor se bloquea
@@ -102,6 +136,12 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
     </header>
 
     <Message v-if="errorAccion" severity="error" :closable="false" class="aviso">{{ errorAccion }}</Message>
+
+    <Message v-if="requisitos && !requisitos.cumple" severity="warn" :closable="false" class="aviso requisitos">
+      <strong>Para publicar proyectos completa tu perfil.</strong>
+      Te falta: {{ requisitos.faltantes.join(', ') }}.
+      <RouterLink to="/perfil/editar" class="requisitos-enlace">Completar perfil</RouterLink>
+    </Message>
 
     <Message v-if="isError" severity="error" :closable="false" class="aviso">
       {{ mensajeDeError(error, 'No se pudieron cargar tus proyectos') }}
@@ -145,17 +185,35 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
               :severity="ESTADOS[data.estadoValidacion as EstadoValidacion].severity"
             />
             <p v-if="data.validacion?.comentario" class="proy-comentario">{{ data.validacion.comentario }}</p>
+            <p
+              v-if="data.estadoValidacion === 'RECHAZADO' && plazoCorreccion(data.fechaLimiteCorreccion)"
+              class="proy-plazo"
+              :class="{ vencido: plazoCorreccion(data.fechaLimiteCorreccion)!.vencido }"
+            >
+              <i class="pi pi-calendar"></i>
+              Corrige antes del {{ fechaCorta(data.fechaLimiteCorreccion) }} ·
+              {{ plazoCorreccion(data.fechaLimiteCorreccion)!.texto }}
+            </p>
           </template>
         </Column>
 
-        <Column header="Publicado" style="width: 6.5rem">
+        <Column header="Visibilidad" style="width: 10rem">
           <template #body="{ data }">
-            <ToggleSwitch
-              :model-value="data.publicado"
-              :disabled="data.estadoValidacion !== 'VALIDADO' || cambiandoId === data.id"
-              :aria-label="`Publicar ${data.titulo}`"
-              @update:model-value="(v: boolean) => cambiarPublicado(data, v)"
-            />
+            <div class="visibilidad">
+              <Tag
+                :value="visibilidadDe(data).label"
+                :icon="visibilidadDe(data).icon"
+                :severity="visibilidadDe(data).severity"
+                :title="visibilidadDe(data).descripcion"
+              />
+              <ToggleSwitch
+                :model-value="data.publicado"
+                :disabled="!!bloqueoPublicar(data) || cambiandoId === data.id"
+                :aria-label="data.publicado ? `Ocultar ${data.titulo}` : `Publicar ${data.titulo}`"
+                @update:model-value="(v: boolean) => cambiarPublicado(data, v)"
+              />
+              <small v-if="bloqueoPublicar(data)" class="visibilidad-nota">{{ bloqueoPublicar(data) }}</small>
+            </div>
           </template>
         </Column>
 
@@ -175,7 +233,34 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
       </DataTable>
     </div>
 
-    <p class="nota">Solo los proyectos validados por la coordinación pueden publicarse en tu portafolio.</p>
+    <p class="nota">
+      <i class="pi pi-lock"></i> <strong>Privado:</strong> solo tú y la coordinación lo ven.
+      <i class="pi pi-globe"></i> <strong>Público:</strong> visible para empresas y visitantes en tu portafolio.
+      Solo se pueden publicar proyectos validados, con tu perfil completo (foto, biografía y habilidades).
+      Si un proyecto es rechazado, corrígelo antes de la fecha límite.
+    </p>
+
+    <Dialog
+      v-model:visible="publicarVisible"
+      modal
+      header="Publicar proyecto"
+      :style="{ width: '28rem' }"
+      :breakpoints="{ '640px': '95vw' }"
+    >
+      <p class="confirmar-texto">
+        <strong>{{ aPublicar?.titulo }}</strong> será visible para <strong>empresas y visitantes</strong> en tu
+        portafolio público, junto con tu nombre, foto y habilidades. Puedes ocultarlo cuando quieras.
+      </p>
+      <template #footer>
+        <Button label="Cancelar" text severity="secondary" :disabled="actualizar.isPending.value" @click="publicarVisible = false" />
+        <Button
+          label="Publicar"
+          icon="pi pi-globe"
+          :loading="actualizar.isPending.value"
+          @click="aPublicar && guardarPublicado(aPublicar, true)"
+        />
+      </template>
+    </Dialog>
 
     <ProyectoFormDialog v-model:visible="formVisible" :proyecto="editando" @guardado="refetch()" />
 
@@ -212,6 +297,15 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
           <h3 class="detalle-sub">Comentario de la coordinación</h3>
           <p class="detalle-texto">{{ detalle.validacion.comentario }}</p>
         </template>
+
+        <Message
+          v-if="detalle.estadoValidacion === 'RECHAZADO' && plazoCorreccion(detalle.fechaLimiteCorreccion)"
+          :severity="plazoCorreccion(detalle.fechaLimiteCorreccion)!.vencido ? 'error' : 'warn'"
+          :closable="false"
+        >
+          Tienes hasta el <strong>{{ fechaCorta(detalle.fechaLimiteCorreccion!) }}</strong> para corregirlo
+          ({{ plazoCorreccion(detalle.fechaLimiteCorreccion)!.texto.toLowerCase() }}). Al editarlo vuelve a revisión.
+        </Message>
       </div>
       <template #footer>
         <Button label="Cerrar" text severity="secondary" @click="detalleVisible = false" />
@@ -297,6 +391,35 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
   color: var(--ws-texto-suave);
   margin: 0.35rem 0 0 0;
   max-width: 16rem;
+}
+
+.proy-plazo {
+  font-size: 0.8rem;
+  color: #f59e0b;
+  margin: 0.35rem 0 0 0;
+}
+
+.proy-plazo.vencido {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.visibilidad {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.visibilidad-nota {
+  font-size: 0.75rem;
+  color: var(--ws-texto-suave);
+}
+
+.requisitos-enlace {
+  margin-left: 0.4rem;
+  font-weight: 600;
+  color: var(--ws-primario);
 }
 
 .chips {

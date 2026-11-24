@@ -4,24 +4,37 @@ import type { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import swaggerJsdoc from "swagger-jsdoc";
 import { apiReference } from "@scalar/express-api-reference";
-import { pingRouter } from "./routes/ping";
-import { authRouter } from "./routes/auth";
-import { perfilRouter } from "./routes/perfil";
-import { perfilesRouter } from "./routes/perfiles";
-import { proyectosRouter } from "./routes/proyectos";
-import { validacionesRouter } from "./routes/validaciones";
-import { usuariosRouter } from "./routes/usuarios";
-import { dosPasosRouter } from "./routes/dosPasos";
-import { perfilFotoRouter } from "./routes/perfilFoto";
-import { perfilCvRouter } from "./routes/perfilCv";
-import { chatRouter } from "./routes/chat";
-import { catalogoRouter } from "./routes/catalogo";
+import { apiRouter } from "./routes";
+import { cabecerasSeguridad, protegerDocs } from "./middleware/seguridad";
+
+const DESCRIPCION_SEGURIDAD = `
+## Seguridad
+
+Cada petición pasa por estas capas (middleware), en orden:
+
+| Capa | Qué hace |
+|---|---|
+| \`cabecerasSeguridad\` | Cabeceras HTTP: \`nosniff\`, \`X-Frame-Options: DENY\`, \`Referrer-Policy\`, HSTS con HTTPS |
+| \`cors\` | Solo acepta los orígenes de \`CORS_ORIGIN\` |
+| \`protegerDocs\` | Esta documentación pide usuario y contraseña (\`DOCS_USUARIO\`/\`DOCS_PASSWORD\`); en producción sin ellos queda oculta |
+| Límite de intentos | Login, registro, cambio de contraseña y código 2FA: **3 intentos fallidos cada 5 minutos**. Las respuestas 401 traen \`intentosRestantes\`; al agotarlos, 429 con \`reintentarEnSegundos\` |
+| \`requireAuth\` | Exige \`Authorization: Bearer <token>\`. Rol y vigencia se leen de la base de datos en cada petición; cambiar la contraseña invalida las sesiones anteriores |
+| \`requireRole\` | Cada ruta privada exige su rol: ESTUDIANTE, COORDINACION o EMPRESA |
+| Validación (Zod) | Todo cuerpo y parámetro se valida; los errores responden 400 con \`detalles\` |
+
+Otras medidas: contraseñas con bcrypt, verificación en dos pasos (TOTP) con secreto cifrado (AES-256-GCM),
+archivos revisados por su contenido real (no por el tipo declarado) y datos personales nunca expuestos al público.
+
+### Códigos de error (\`code\`)
+\`CREDENCIALES_INVALIDAS\`, \`CODIGO_INVALIDO\`, \`VERIFICACION_VENCIDA\`, \`DEMASIADOS_INTENTOS\`,
+\`CARNET_REQUERIDO\`, \`PERFIL_INCOMPLETO\`.
+`;
 
 const openApiSpec = swaggerJsdoc({
   definition: {
 
     openapi: "3.0.3",
-    info: { title: "Workspace ULS API", version: "1.0.0" },
+    info: { title: "Workspace ULS API", version: "1.0.0", description: DESCRIPCION_SEGURIDAD },
     servers: [{ url: process.env.PUBLIC_URL ?? "http://localhost:3000" }],
     components: {
       securitySchemes: {
@@ -90,6 +103,9 @@ const openApiSpec = swaggerJsdoc({
           type: "object",
           properties: {
             error: { type: "string", example: "Datos inválidos" },
+            code: { type: "string", example: "CREDENCIALES_INVALIDAS", description: "Código estable para el frontend (no siempre presente)" },
+            intentosRestantes: { type: "integer", example: 2, description: "Solo en rutas con límite de intentos" },
+            reintentarEnSegundos: { type: "integer", example: 240, description: "Solo en 429" },
             detalles: {
               type: "array",
               items: {
@@ -121,25 +137,16 @@ const openApiSpec = swaggerJsdoc({
 
 export const app = express();
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
 
+app.use(cabecerasSeguridad);
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") }));
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 
-app.get("/openapi.json", (_req, res) => res.json(openApiSpec));
-app.use("/reference", apiReference({ content: openApiSpec }));
+app.get("/openapi.json", protegerDocs, (_req, res) => res.json(openApiSpec));
+app.use("/reference", protegerDocs, apiReference({ content: openApiSpec }));
 
-app.use("/api/v1", pingRouter);
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/auth/2fa", dosPasosRouter);
-app.use("/api/v1/perfil/foto", perfilFotoRouter);
-app.use("/api/v1/perfil/cv", perfilCvRouter);
-app.use("/api/v1/perfil", perfilRouter);
-app.use("/api/v1/proyectos", proyectosRouter);
-app.use("/api/v1/usuarios", usuariosRouter);
-app.use("/api/v1/validaciones", validacionesRouter);
-app.use("/api/v1/perfiles", perfilesRouter);
-app.use("/api/v1/chat", chatRouter);
-app.use("/api/v1/catalogo", catalogoRouter);
+app.use("/api/v1", apiRouter);
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (

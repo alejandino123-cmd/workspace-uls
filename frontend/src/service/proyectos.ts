@@ -15,6 +15,8 @@ export interface Proyecto {
   estadoValidacion: EstadoValidacion
   publicado: boolean
   destacado: boolean
+  // Solo en RECHAZADO: hasta cuándo puede corregirlo el estudiante
+  fechaLimiteCorreccion: string | null
   createdAt: string
   updatedAt: string
   validacion: { comentario: string | null; createdAt: string } | null
@@ -50,6 +52,17 @@ export async function actualizarProyecto(id: number, datos: Partial<ProyectoInpu
 
 export async function eliminarProyecto(id: number) {
   await api.delete(`/proyectos/${id}`)
+}
+
+// Para publicar se necesita foto de perfil, biografía y al menos una habilidad
+export interface RequisitosPublicacion {
+  cumple: boolean
+  faltantes: string[]
+}
+
+export async function obtenerRequisitosPublicacion() {
+  const { data } = await api.get<RequisitosPublicacion>('/proyectos/requisitos-publicacion')
+  return data
 }
 // Vista previa del proyecto. Cambiarla vuelve el proyecto a PENDIENTE (igual que editar su contenido).
 export const TAMANO_MAX_IMAGEN = 2 * 1024 * 1024

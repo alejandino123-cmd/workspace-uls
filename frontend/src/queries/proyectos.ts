@@ -3,11 +3,22 @@ import {
   actualizarProyecto,
   eliminarProyecto,
   listarMisProyectos,
+  obtenerRequisitosPublicacion,
   type ProyectoInput,
-} from '@/service/proyectos'
+} from '@/service'
 
 export const clavesProyectos = {
   misProyectos: ['mis-proyectos'] as const,
+  requisitos: ['requisitos-publicacion'] as const,
+}
+
+// ¿El perfil tiene lo mínimo para publicar? Se vuelve a pedir al entrar (el perfil pudo cambiar)
+export function useRequisitosPublicacion() {
+  return useQuery({
+    queryKey: clavesProyectos.requisitos,
+    queryFn: obtenerRequisitosPublicacion,
+    staleTime: 0,
+  })
 }
 
 // Lista de mis proyectos, con caché y reintento automático

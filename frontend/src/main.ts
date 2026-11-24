@@ -11,10 +11,7 @@ import App from './App.vue'
 import router from './router'
 import { queryClient } from './lib/queryClient'
 
-// Preset WorkspaceULS: Aura como base, con la paleta azul de la marca (un solo tema, oscuro).
-// Escala azul: 400 = Electric Blue (botones), 300 = Bright Blue (hover), 500 = Royal Blue (activo), 100 = Ice Blue.
-// Escala de superficies: 950 = fondo azul noche, 900 = paneles y menús, 800 = superficies elevadas,
-// 400 = Pale Slate (texto secundario), 0 = blanco (títulos).
+
 const WorkspacePreset = definePreset(Aura, {
   // Esquinas ligeramente redondeadas (sin tarjetas excesivamente redondas)
   primitive: {

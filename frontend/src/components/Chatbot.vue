@@ -5,7 +5,7 @@ import { RouterLink } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { useChatStore, type ChatMessage } from '@/stores/chat';
-import type { TarjetaEstudiante, TarjetaProyecto } from '@/service/chatBot';
+import type { TarjetaEstudiante, TarjetaProyecto } from '@/service';
 
 // El estado (mensajes, abierto, cargando) vive en el store para que no se pierda al navegar
 const chat = useChatStore();

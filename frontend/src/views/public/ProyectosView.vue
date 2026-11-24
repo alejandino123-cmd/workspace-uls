@@ -9,7 +9,7 @@ import Message from 'primevue/message'
 import Paginator from 'primevue/paginator'
 import Select from 'primevue/select'
 import ProyectoCard from '@/components/public/ProyectoCard.vue'
-import type { FiltrosProyectos } from '@/service/catalogo'
+import type { FiltrosProyectos } from '@/service'
 import { useAniosPublicos, useProyectosPublicos, useTecnologiasPublicas } from '@/queries/catalogo'
 
 const POR_PAGINA = 12

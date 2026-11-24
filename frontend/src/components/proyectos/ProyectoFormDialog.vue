@@ -15,9 +15,8 @@ import {
   TIPOS_IMAGEN,
   type Proyecto,
   type ProyectoInput,
-} from '@/service/proyectos'
-import { mensajeDeError } from '@/service/errores'
-
+  mensajeDeError,
+} from '@/service'
 const props = defineProps<{
   visible: boolean
   proyecto: Proyecto | null // null = crear uno nuevo

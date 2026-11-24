@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { carnetSchema, validationError } from "../lib/validation";
 import { correoInstitucionalSchema, esCorreoInstitucional } from "../lib/institucional";
-import { limitarPorCorreo, limitarPorUsuario } from "../lib/rate-limit";
+import { intentosRestantes, limitarPorCorreo, limitarPorUsuario } from "../lib/rate-limit";
 import { signToken, signTokenTemporal } from "../lib/tokens";
 
 export const authRouter = Router();
@@ -143,7 +143,11 @@ authRouter.post("/login", limitarPorCorreo, async (req, res) => {
   // Una cuenta sin contraseña se trata igual que credenciales erróneas.
   const valida = await bcrypt.compare(password, found?.passwordHash ?? HASH_FICTICIO);
   if (!found || !found.passwordHash || !valida) {
-    return res.status(401).json({ error: "Credenciales inválidas" });
+    return res.status(401).json({
+      error: "Credenciales inválidas",
+      code: "CREDENCIALES_INVALIDAS",
+      intentosRestantes: intentosRestantes(req),
+    });
   }
 
   // Con autenticación en dos pasos, aún no se entrega el token de acceso

@@ -6,7 +6,7 @@ import {
   listarTecnologiasPublicas,
   obtenerProyectoPublico,
   type FiltrosProyectos,
-} from '@/service/catalogo'
+} from '@/service'
 
 // Catálogo con filtros y paginación; `keepPreviousData` evita parpadeos al cambiar de página
 export function useProyectosPublicos(filtros: MaybeRefOrGetter<FiltrosProyectos>) {

@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/vue-query'
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
-import { listarDestacados, listarPerfiles, obtenerFiltros, type FiltrosPerfiles } from '@/service/perfiles'
+import { listarDestacados, listarPerfiles, obtenerFiltros, type FiltrosPerfiles } from '@/service'
 
 // Portafolio público con caché. `keepPreviousData` mantiene la lista visible mientras carga la siguiente página.
 export function usePortafolios(filtros: MaybeRefOrGetter<FiltrosPerfiles>) {
