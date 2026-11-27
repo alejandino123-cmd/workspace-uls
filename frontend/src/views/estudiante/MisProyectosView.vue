@@ -233,13 +233,6 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
       </DataTable>
     </div>
 
-    <p class="nota">
-      <i class="pi pi-lock"></i> <strong>Privado:</strong> solo tú y la coordinación lo ven.
-      <i class="pi pi-globe"></i> <strong>Público:</strong> visible para empresas y visitantes en tu portafolio.
-      Solo se pueden publicar proyectos validados, con tu perfil completo (foto, biografía y habilidades).
-      Si un proyecto es rechazado, corrígelo antes de la fecha límite.
-    </p>
-
     <Dialog
       v-model:visible="publicarVisible"
       modal
@@ -474,12 +467,6 @@ const cambiandoId = computed(() => (actualizar.isPending.value ? actualizar.vari
 .vacio-texto {
   color: var(--ws-texto-suave);
   margin: 0;
-}
-
-.nota {
-  color: var(--ws-texto-suave);
-  font-size: 0.85rem;
-  margin-top: 1rem;
 }
 
 .detalle {

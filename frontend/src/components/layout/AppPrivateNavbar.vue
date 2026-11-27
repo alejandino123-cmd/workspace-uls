@@ -6,6 +6,7 @@ import Button from 'primevue/button'
 import type { MenuItem } from 'primevue/menuitem'
 import { useAuthStore } from '@/stores/auth'
 import AvatarEstudiante from '@/components/perfil/AvatarEstudiante.vue'
+import CampanaNotificaciones from './CampanaNotificaciones.vue'
 import { obtenerPerfil } from '@/service'
 
 // Barra superior de la zona privada: botón para abrir el menú lateral (móvil) y menú del usuario.
@@ -60,6 +61,8 @@ function toggleMenu(event: Event) {
       aria-label="Abrir el menú"
       @click="emit('menu')"
     />
+
+    <CampanaNotificaciones v-if="authStore.rol === 'ESTUDIANTE'" />
 
     <Button
       type="button"
