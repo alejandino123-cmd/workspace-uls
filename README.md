@@ -1,5 +1,15 @@
 # Workspace ULS
 
+## Probar el sistema
+
+Sitio publicado: https://workspace-uls.netlify.app
+
+Cuentas de prueba:
+
+| Rol | Correo | Contraseña 
+| Estudiante | alejandino@uls.edu.sv | contraseña:12345678 |
+| Coordinación | admin@uls.edu.sv | contraseña:12345678 |
+
 Plataforma de portafolios académicos para los estudiantes de Ciencias de la Computación de la Universidad Luterana Salvadoreña (ULS).
 
 Cada estudiante arma su portafolio con perfil, habilidades, CV y proyectos. La coordinación académica valida o rechaza cada proyecto, y solo lo validado y publicado es visible para visitantes y empresas, que además pueden consultar a un asistente con IA.

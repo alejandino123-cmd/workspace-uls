@@ -5,7 +5,7 @@ import { RouterLink } from 'vue-router';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { useChatStore, type ChatMessage } from '@/stores/chat';
-import type { TarjetaEstudiante, TarjetaProyecto } from '@/service';
+import type { TarjetaEstudiante, TarjetaProyecto } from '@/service/chatBot';
 
 // El estado (mensajes, abierto, cargando) vive en el store para que no se pierda al navegar
 const chat = useChatStore();
@@ -208,7 +208,8 @@ if (isOpen.value) scrollToBottom();
 .chatbot {
   position: fixed;
   right: 1.5rem;
-  bottom: 1.5rem;
+  /* Sube el botón para que no lo tape la marca "Powered by Netlify" (esquina inferior derecha) */
+  bottom: 5rem;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -238,7 +239,7 @@ if (isOpen.value) scrollToBottom();
 
 .chatbot__window {
   width: min(380px, calc(100vw - 3rem));
-  height: min(520px, calc(100vh - 8rem));
+  height: min(520px, calc(100vh - 12rem));
   display: flex;
   flex-direction: column;
   background: var(--ws-superficie);
